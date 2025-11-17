@@ -32,6 +32,13 @@ Databases ?
 	- mongo pratique : json
 	- postgreSQL 
 --> **MongoDB**
+
+Models ? 
+- TTS (Kokoro (local ou peut etre hugging face faut voir) / ElevenLabs)
+- STT / ASR (whisper, Voxstral)
+- LLM for intent recognition and response generation (Google, Mistral ou quoi + LangChain)
+
+
 ## List tables : 
 
 - Plat (entree plat ...)
