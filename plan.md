@@ -25,6 +25,7 @@ The result will be a fully voice-driven AI receptionist that simulates a real co
 - _Cloud models_ (Mistral, OpenAI)
     - **Pros**: State-of-the-art performance, scalability, easy updates
     - **Cons**: Privacy concerns, latency, ongoing costs
+--> on part plutot sur du cloud pour l'instant
 
 Databases ? 
 - **PostgreSQL** or **MongoDB** ?
