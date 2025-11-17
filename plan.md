@@ -73,6 +73,7 @@ Models ?
 - Chat with a fake assistant
 	- record voice
 	- send voice to STT into LLM into TTS 
+    	- avoir un LLM de fou, avec un vrai prompt
 	- play new voice
 - Connect to database (MCP)
 	- make reservations
