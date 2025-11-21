@@ -1,0 +1,39 @@
+
+
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "type": "object",
+  "properties": {
+    "date_time": {
+      "type": "string"
+    },
+    "customer_name": {
+      "type": "string"
+    },
+    "customer_phone": {
+      "type": "string"
+    },
+    "nb_person": {
+      "type": "integer"
+    },
+    "table_id": {
+      "type": "integer"
+    },
+    "status": {
+      "type": "string"
+    },
+    "special_requests": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "_id",
+    "date_time",
+    "customer_name",
+    "customer_phone",
+    "nb_person",
+    "table_id",
+    "special_requests"
+  ]
+}
+

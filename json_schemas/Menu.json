@@ -1,0 +1,35 @@
+
+
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "type": "object",
+  "properties": {
+    "_id": {
+      "type": "integer"
+    },
+    "name": {
+      "type": "string"
+    },
+    "dishes": {
+      "type": "array",
+      "items": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "integer"
+        }
+      ]
+    },
+    "promotion_percentage": {
+      "type": "integer"
+    }
+  },
+  "required": [
+    "_id",
+    "name",
+    "dishes",
+    "promotion_percentage"
+  ]
+}
+

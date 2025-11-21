@@ -1,0 +1,208 @@
+[
+  {
+    "name": "Green Salad",
+    "category": "Starter",
+    "ingredients": [
+      { "name": "Lettuce", "is_allergen": false, "allergen_type": null },
+      { "name": "Vinaigrette", "is_allergen": false, "allergen_type": null }
+    ],
+    "is_vegetarian": true,
+    "price": 4.5
+  },
+  {
+    "name": "French Onion Soup",
+    "category": "Starter",
+    "ingredients": [
+      { "name": "Onion", "is_allergen": false, "allergen_type": null },
+      { "name": "Butter", "is_allergen": true, "allergen_type": "Lactose" }
+    ],
+    "is_vegetarian": false,
+    "price": 5.0
+  },
+  {
+    "name": "Bruschetta",
+    "category": "Starter",
+    "ingredients": [
+      { "name": "Bread", "is_allergen": true, "allergen_type": "Gluten" },
+      { "name": "Tomato", "is_allergen": false, "allergen_type": null },
+      { "name": "Basil", "is_allergen": false, "allergen_type": null }
+    ],
+    "is_vegetarian": true,
+    "price": 6.0
+  },
+  {
+    "name": "Beef Carpaccio",
+    "category": "Starter",
+    "ingredients": [
+      { "name": "Beef", "is_allergen": false, "allergen_type": null },
+      { "name": "Parmesan", "is_allergen": true, "allergen_type": "Lactose" }
+    ],
+    "is_vegetarian": false,
+    "price": 8.5
+  },
+  {
+    "name": "Quiche Lorraine",
+    "category": "Starter",
+    "ingredients": [
+      { "name": "Eggs", "is_allergen": true, "allergen_type": "Egg" },
+      { "name": "Milk", "is_allergen": true, "allergen_type": "Lactose" },
+      { "name": "Shortcrust Pastry", "is_allergen": true, "allergen_type": "Gluten" }
+    ],
+    "is_vegetarian": false,
+    "price": 6.5
+  },
+
+  {
+    "name": "Steak with Fries",
+    "category": "Main",
+    "ingredients": [
+      { "name": "Beef", "is_allergen": false, "allergen_type": null },
+      { "name": "Potatoes", "is_allergen": false, "allergen_type": null }
+    ],
+    "is_vegetarian": false,
+    "price": 15
+  },
+  {
+    "name": "Carbonara Pasta",
+    "category": "Main",
+    "ingredients": [
+      { "name": "Pasta", "is_allergen": true, "allergen_type": "Gluten" },
+      { "name": "Bacon", "is_allergen": false, "allergen_type": null },
+      { "name": "Cream", "is_allergen": true, "allergen_type": "Lactose" }
+    ],
+    "is_vegetarian": false,
+    "price": 13.5
+  },
+  {
+    "name": "Mushroom Risotto",
+    "category": "Main",
+    "ingredients": [
+      { "name": "Rice", "is_allergen": false, "allergen_type": null },
+      { "name": "Mushrooms", "is_allergen": false, "allergen_type": null },
+      { "name": "Parmesan", "is_allergen": true, "allergen_type": "Lactose" }
+    ],
+    "is_vegetarian": true,
+    "price": 14
+  },
+  {
+    "name": "Roast Chicken",
+    "category": "Main",
+    "ingredients": [
+      { "name": "Chicken", "is_allergen": false, "allergen_type": null }
+    ],
+    "is_vegetarian": false,
+    "price": 12.5
+  },
+  {
+    "name": "House Burger",
+    "category": "Main",
+    "ingredients": [
+      { "name": "Bread", "is_allergen": true, "allergen_type": "Gluten" },
+      { "name": "Steak", "is_allergen": false, "allergen_type": null },
+      { "name": "Cheese", "is_allergen": true, "allergen_type": "Lactose" }
+    ],
+    "is_vegetarian": false,
+    "price": 14.5
+  },
+
+  {
+    "name": "Tiramisu",
+    "category": "Dessert",
+    "ingredients": [
+      { "name": "Mascarpone", "is_allergen": true, "allergen_type": "Lactose" },
+      { "name": "Biscuits", "is_allergen": true, "allergen_type": "Gluten" }
+    ],
+    "is_vegetarian": true,
+    "price": 6
+  },
+  {
+    "name": "Crème Brûlée",
+    "category": "Dessert",
+    "ingredients": [
+      { "name": "Milk", "is_allergen": true, "allergen_type": "Lactose" },
+      { "name": "Eggs", "is_allergen": true, "allergen_type": "Egg" }
+    ],
+    "is_vegetarian": true,
+    "price": 5.5
+  },
+  {
+    "name": "Chocolate Fondant",
+    "category": "Dessert",
+    "ingredients": [
+      { "name": "Chocolate", "is_allergen": false, "allergen_type": null },
+      { "name": "Butter", "is_allergen": true, "allergen_type": "Lactose" },
+      { "name": "Flour", "is_allergen": true, "allergen_type": "Gluten" }
+    ],
+    "is_vegetarian": true,
+    "price": 6.5
+  },
+  {
+    "name": "Chocolate Mousse",
+    "category": "Dessert",
+    "ingredients": [
+      { "name": "Chocolate", "is_allergen": false, "allergen_type": null },
+      { "name": "Eggs", "is_allergen": true, "allergen_type": "Egg" }
+    ],
+    "is_vegetarian": true,
+    "price": 5
+  },
+  {
+    "name": "Fruit Salad",
+    "category": "Dessert",
+    "ingredients": [
+      { "name": "Fresh Fruit", "is_allergen": false, "allergen_type": null }
+    ],
+    "is_vegetarian": true,
+    "price": 4.5
+  },
+
+  {
+    "name": "Coca-Cola",
+    "category": "Drink",
+    "ingredients": [
+      { "name": "Carbonated Water", "is_allergen": false, "allergen_type": null },
+      { "name": "Sugar", "is_allergen": false, "allergen_type": null }
+    ],
+    "is_vegetarian": true,
+    "price": 3
+  },
+  {
+    "name": "Still Water",
+    "category": "Drink",
+    "ingredients": [
+      { "name": "Water", "is_allergen": false, "allergen_type": null }
+    ],
+    "is_vegetarian": true,
+    "price": 2
+  },
+  {
+    "name": "Iced Tea",
+    "category": "Drink",
+    "ingredients": [
+      { "name": "Tea", "is_allergen": false, "allergen_type": null },
+      { "name": "Sugar", "is_allergen": false, "allergen_type": null }
+    ],
+    "is_vegetarian": true,
+    "price": 3.5
+  },
+  {
+    "name": "Orange Juice",
+    "category": "Drink",
+    "ingredients": [
+      { "name": "Orange", "is_allergen": false, "allergen_type": null }
+    ],
+    "is_vegetarian": true,
+    "price": 3.5
+  },
+  {
+    "name": "Homemade Lemonade",
+    "category": "Drink",
+    "ingredients": [
+      { "name": "Water", "is_allergen": false, "allergen_type": null },
+      { "name": "Lemon", "is_allergen": false, "allergen_type": null },
+      { "name": "Sugar", "is_allergen": false, "allergen_type": null }
+    ],
+    "is_vegetarian": true,
+    "price": 4
+  }
+]

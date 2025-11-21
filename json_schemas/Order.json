@@ -1,0 +1,67 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "type": "object",
+  "properties": {
+    "_id": {
+      "type": "integer"
+    },
+    "order_type": {
+      "type": "string"
+    },
+    "customer_name": {
+      "type": "string"
+    },
+    "customer_phone": {
+      "type": "string"
+    },
+    "delivery_address": {
+      "type": "object",
+      "properties": {
+        "street": { "type": "string" },
+        "city": { "type": "string" },
+        "postal_code": { "type": "string" }
+      },
+      "required": ["street", "city", "postal_code"]
+    },
+    "delivery_time": {
+      "type": "string"
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "dish_id": { "type": "integer" },
+          "quantity": { "type": "integer" }
+        },
+        "required": ["dish_id", "quantity"]
+      }
+    },
+    "menus": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "menu_id": { "type": "integer" },
+          "quantity": { "type": "integer" },
+          "promotion_percentage": { "type": "integer" }
+        },
+        "required": ["menu_id", "quantity", "promotion_percentage"]
+      }
+    },
+    "order_status": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "_id",
+    "order_type",
+    "customer_name",
+    "customer_phone",
+    "delivery_address",
+    "delivery_time",
+    "items",
+    "menus",
+    "order_status"
+  ]
+}

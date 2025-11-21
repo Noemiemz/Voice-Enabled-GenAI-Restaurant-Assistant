@@ -1,0 +1,47 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string"
+    },
+    "category": {
+      "type": "string"
+    },
+    "ingredients": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "is_allergen": {
+            "type": "boolean"
+          },
+          "allergen_type": {
+            "type": ["string", "null"]
+          }
+        },
+        "required": [
+          "name",
+          "is_allergen",
+          "allergen_type"
+        ]
+      }
+    },
+    "is_vegetarian": {
+      "type": "boolean"
+    },
+    "price": {
+      "type": "number"
+    }
+  },
+  "required": [
+    "name",
+    "category",
+    "ingredients",
+    "is_vegetarian",
+    "price"
+  ]
+}
