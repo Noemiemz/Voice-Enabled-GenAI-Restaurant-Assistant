@@ -1,12 +1,14 @@
 from dotenv import load_dotenv
 import streamlit as st
 import os
-MISTRAL_API_KEY = os.environ.get("MISTRAL_API_KEY")
+import numpy as np
 
 load_dotenv()
 
+MISTRAL_API_KEY = os.environ.get("MISTRAL_API_KEY")
+
 from models.llm import MistralWrapper
-from models.tts import generate_speech
+from models.tts import stream_speech
 
 def main():
 	st.set_page_config(page_title="Voice Chatbot", layout="wide")
@@ -22,7 +24,7 @@ def main():
 	st.subheader("Conversation")
 
 	# Display chat messages
-	for msg in st.session_state.history:
+	for i, msg in enumerate(st.session_state.history):
 		role = msg.get("role", "user")
 		content = msg.get("content", "")
 		if role == "user":
@@ -44,9 +46,13 @@ def main():
 			print(e)
 			assistant_text = "Sorry, I couldn't generate a response."
 	
-		# Synthesize speech
-		wav_audio, sample_rate = generate_speech(assistant_text)
-		st.audio(wav_audio, format="audio/wav", sample_rate=sample_rate)
+		# Display the new assistant message
+		st.markdown(f"**You:** {user_input}")
+		st.markdown(f"**Assistant:** {assistant_text}")
+		
+		# Stream and play audio chunks with autoplay
+		for wav_chunk, sample_rate in stream_speech(assistant_text):
+			st.audio(wav_chunk, format="audio/wav", sample_rate=sample_rate, autoplay=True)
 
 if __name__ == "__main__":
 	main()
