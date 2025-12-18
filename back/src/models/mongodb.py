@@ -120,8 +120,8 @@ class MongoDBManager:
             return
         
         # Create collections
-        reservations_collection = self.db["reservations"]
-        menu_collection = self.db["menu"]
+        reservations_collection = self.db["Reservation"]
+        menu_collection = self.db["Menu"]
         conversations_collection = self.db["conversations"]
         users_collection = self.db["users"]
         
@@ -166,7 +166,7 @@ class MongoDBManager:
             "lastUpdated": datetime.now().isoformat()
         }
         
-        self.db["menu"].insert_one(default_menu)
+        self.db["Menu"].insert_one(default_menu)
         print("[INFO] Initialized default menu data")
     
     def get_reservation(self, reservation_id: str) -> Optional[Dict[str, Any]]:
@@ -176,7 +176,7 @@ class MongoDBManager:
             return None
         
         try:
-            reservation = self.db["reservations"].find_one({"_id": reservation_id})
+            reservation = self.db["Reservation"].find_one({"_id": reservation_id})
             if reservation:
                 reservation["_id"] = str(reservation["_id"])
             return reservation
@@ -197,7 +197,7 @@ class MongoDBManager:
             reservation_data["status"] = "confirmed"
             
             # Insert reservation
-            result = self.db["reservations"].insert_one(reservation_data)
+            result = self.db["Reservation"].insert_one(reservation_data)
             
             # Return the created reservation with ID
             created_reservation = self.get_reservation(str(result.inserted_id))
@@ -214,7 +214,7 @@ class MongoDBManager:
         
         try:
             query = filters or {}
-            reservations = list(self.db["reservations"].find(query).sort("createdAt", -1))
+            reservations = list(self.db["Reservation"].find(query).sort("createdAt", -1))
             
             # Convert ObjectId to string
             for reservation in reservations:
@@ -234,7 +234,7 @@ class MongoDBManager:
         try:
             update_data["updatedAt"] = datetime.now().isoformat()
             
-            result = self.db["reservations"].update_one(
+            result = self.db["Reservation"].update_one(
                 {"_id": reservation_id},
                 {"$set": update_data}
             )
@@ -251,7 +251,7 @@ class MongoDBManager:
             return False
         
         try:
-            result = self.db["reservations"].update_one(
+            result = self.db["Reservation"].update_one(
                 {"_id": reservation_id},
                 {"$set": {
                     "status": "cancelled",
@@ -271,7 +271,7 @@ class MongoDBManager:
             return None
         
         try:
-            menu = self.db["menu"].find_one()
+            menu = self.db["Menu"].find_one()
             if menu and "_id" in menu:
                 menu["_id"] = str(menu["_id"])
             return menu
@@ -288,7 +288,7 @@ class MongoDBManager:
         try:
             menu_data["lastUpdated"] = datetime.now().isoformat()
             
-            result = self.db["menu"].replace_one(
+            result = self.db["Menu"].replace_one(
                 {},
                 menu_data,
                 upsert=True
