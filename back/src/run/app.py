@@ -61,6 +61,71 @@ menu = {
     ]
 }
 
+
+def setup_agent_system():
+    """
+    Initialize the agent system with restaurant data
+    """
+    try:
+        from agents.orchestrator_agent import OrchestratorAgent
+        from agents.ui_agent import UIAgent
+        from agents.integration_example import RestaurantInfoAgent
+        
+        # Create orchestrator
+        orchestrator = OrchestratorAgent()
+        
+        # Create restaurant agent with existing menu data
+        restaurant_agent = RestaurantInfoAgent(menu_data=menu)
+        orchestrator.register_agent(restaurant_agent)
+        
+        # Create UI agent and connect to orchestrator
+        ui_agent = UIAgent()
+        ui_agent.connect_to_orchestrator(orchestrator)
+        orchestrator.register_agent(ui_agent)
+        
+        print("[SUCCESS] Agent system initialized successfully")
+        return ui_agent
+        
+    except Exception as e:
+        print(f"[WARNING] Could not initialize agent system: {e}")
+        print("[INFO] Falling back to direct LLM processing")
+        return None
+
+
+# Initialize agent system
+ui_agent = setup_agent_system()
+
+
+def process_text_through_agents(text, context=None):
+    """
+    Process text through the agent system with fallback to LLM
+    
+    Args:
+        text (str): Text to process
+        context (dict): Additional context
+        
+    Returns:
+        tuple: (response_text, history)
+    """
+    if context is None:
+        context = {}
+    
+    # Try agent system first
+    if ui_agent:
+        try:
+            result = ui_agent.execute(text, context)
+            
+            if result.get("success", False):
+                message = result.get("message", "")
+                history = [{"role": "assistant", "content": message}]
+                return message, history
+        except Exception as e:
+            print(f"[WARNING] Agent processing failed: {e}")
+    
+    # Fallback to original LLM
+    print("[INFO] Using LLM fallback")
+    return llm.generate(text, [])
+
 def get_db():
     """Lazy-load MongoDB connection"""
     global USE_MONGODB
@@ -127,8 +192,11 @@ def process_audio():
         
         print(f"Transcribed text: {user_text}")
         
-        # Get LLM response
-        text_response, history = llm.generate(user_text)
+        # Get response through agent system (with LLM fallback)
+        text_response, history = process_text_through_agents(user_text, {
+            'user_id': 'audio_user',
+            'interface': 'voice'
+        })
         
         # Clean up temporary file
         os.unlink(temp_audio_path)
@@ -144,10 +212,50 @@ def process_audio():
         traceback.print_exc()
         return jsonify({"error": f"Audio processing error: {str(e)}"}), 500
 
+@app.route('/api/agent-process', methods=['POST'])
+def agent_process():
+    """
+    Process text requests through the agent system
+    """
+    try:
+        data = request.get_json()
+        if not data or 'message' not in data:
+            return jsonify({"success": False, "error": "No message provided"}), 400
+        
+        user_input = data['message']
+        context = {
+            'user_id': data.get('user_id', 'anonymous'),
+            'interface': data.get('interface', 'text')
+        }
+        
+        if not ui_agent:
+            return jsonify({
+                "success": False,
+                "error": "Agent system not available",
+                "message": "Please try again later"
+            }), 503
+        
+        result = ui_agent.execute(user_input, context)
+        
+        return jsonify({
+            "success": result.get("success", False),
+            "message": result.get("message", ""),
+            "type": result.get("type", "text"),
+            "data": result.get("data")
+        })
+        
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "error": str(e),
+            "message": "An error occurred while processing your request"
+        }), 500
+
+
 @app.route('/api/chat', methods=['POST'])
 def chat():
     """
-    Handle text-based chat messages
+    Handle text-based chat messages (legacy endpoint, now uses agents)
     """
     try:
         data = request.get_json()
@@ -157,8 +265,11 @@ def chat():
         if not message:
             return jsonify({"error": "No message provided"}), 400
         
-        # Get LLM response
-        text_response, updated_history = llm.generate(message, history)
+        # Get response through agent system (with LLM fallback)
+        text_response, updated_history = process_text_through_agents(message, {
+            'user_id': 'chat_user',
+            'interface': 'text'
+        })
         
         return jsonify({
             "textResponse": text_response,
