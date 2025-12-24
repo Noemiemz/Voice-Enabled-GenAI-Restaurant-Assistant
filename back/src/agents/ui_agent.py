@@ -1,29 +1,21 @@
 """
-UI Agent
-This agent handles communication with the user interface.
+UI Agent - Handles direct user interaction and interface management
 """
+from typing import Dict, Any, Optional
+from smolagents import ToolCallingAgent
 
-from .base_agent import BaseAgent
-from typing import Dict, Any, Optional, List
-
-
-class UIAgent(BaseAgent):
+class UIAgent(ToolCallingAgent):
     """
-    UI Agent that handles communication with the user interface.
-    
-    This agent:
-    - Receives user input
-    - Sends requests to the orchestrator
-    - Formats responses for display
-    - Handles UI-specific logic
+    User Interface Agent that handles direct interaction with users.
+    Manages conversation flow, clarifies requests, and formats responses.
     """
     
-    def __init__(self, name="UIAgent", description="Handles user interface communication"):
-        super().__init__(name, description)
+    def __init__(self):
+        """Initialize the UI agent"""
         self.orchestrator = None
-        self.conversation_history = []
+        self.conversation_context: Dict[str, Any] = {}
         
-    def connect_to_orchestrator(self, orchestrator):
+    def connect_to_orchestrator(self, orchestrator) -> None:
         """
         Connect this UI agent to an orchestrator
         
@@ -31,155 +23,112 @@ class UIAgent(BaseAgent):
             orchestrator: The orchestrator agent to connect to
         """
         self.orchestrator = orchestrator
-        print(f"UI Agent connected to orchestrator: {orchestrator.name}")
+        print("[UI_AGENT] Connected to orchestrator")
         
-    def execute(self, task: str, context: Optional[Dict] = None) -> Dict[str, Any]:
+    def execute(self, user_input: str, context: Dict[str, Any] = None) -> Dict[str, Any]:
         """
-        Execute a task by sending it to the orchestrator
+        Execute user input through the agent system
         
         Args:
-            task (str): The task to execute
-            context (dict): Additional context for the task
+            user_input: User's input text
+            context: Additional context about the request
             
         Returns:
-            dict: Result from the orchestrator
+            Dictionary containing the result of the execution
         """
         if context is None:
             context = {}
             
-        # Add UI-specific context
-        context["source"] = "ui"
-        context["interface"] = "voice"  # Could be "voice", "text", "chat", etc.
-        
-        if not self.orchestrator:
-            return {
-                "success": False,
-                "error": "UI Agent not connected to orchestrator",
-                "agent": self.name
-            }
+        # Update conversation context
+        self.conversation_context.update(context)
         
         try:
-            # Send task to orchestrator
-            result = self.orchestrator.execute(task, context)
-            
-            # Format the response for UI display
-            formatted_result = self._format_for_ui(result)
-            
-            # Store in conversation history
-            self._add_to_conversation_history(task, formatted_result)
-            
-            return formatted_result
-            
+            # If connected to orchestrator, use it to process the request
+            if self.orchestrator:
+                result = self.orchestrator.execute(user_input, context)
+                
+                # Format the response for UI
+                formatted_result = self.format_response(result)
+                
+                return formatted_result
+            else:
+                return {
+                    'success': False,
+                    'message': "UI agent not connected to orchestrator",
+                    'error': 'No orchestrator connection'
+                }
+                
         except Exception as e:
+            print(f"[UI_AGENT] Error processing request: {e}")
             return {
-                "success": False,
-                "error": f"UI Agent error: {str(e)}",
-                "agent": self.name
+                'success': False,
+                'message': f"Désolé, une erreur est survenue: {str(e)}",
+                'error': str(e)
             }
     
-    def _format_for_ui(self, result: Dict) -> Dict:
+    def format_response(self, result: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Format the orchestrator result for UI display
+        Format the response for UI display
         
         Args:
-            result (dict): Result from orchestrator
+            result: Raw result from agent execution
             
         Returns:
-            dict: Formatted result for UI
+            Formatted result for UI
         """
-        if not result["success"]:
-            return {
-                "success": False,
-                "message": f"Error: {result.get('error', 'Unknown error')}",
-                "type": "error"
-            }
+        formatted = result.copy()
         
-        # Extract and format the response
-        response = result["response"]
+        # Add UI-specific formatting
+        if result.get('success', False):
+            formatted['message'] = self._format_message(result.get('message', ''))
+        else:
+            formatted['message'] = f"❌ {result.get('message', 'Erreur inconnue')}"
+            
+        return formatted
         
-        # Simple formatting based on response type
-        if isinstance(response, dict):
-            if "menu_items" in response:
-                formatted_message = "Menu items:\n" + "\n".join(f"- {item}" for item in response["menu_items"])
-                return {
-                    "success": True,
-                    "message": formatted_message,
-                    "type": "menu",
-                    "data": response
-                }
-            elif "reservation_status" in response:
-                return {
-                    "success": True,
-                    "message": f"Reservation {response['reservation_status']}",
-                    "type": "reservation",
-                    "data": response
-                }
-        
-        # Default formatting
-        return {
-            "success": True,
-            "message": str(response),
-            "type": "text",
-            "data": response
-        }
-    
-    def _add_to_conversation_history(self, task: str, result: Dict):
+    def _format_message(self, message: str) -> str:
         """
-        Add a task and result to conversation history
+        Format a message for better UI display
+        """
+        if not message:
+            return ""
+            
+        # Basic formatting - could be enhanced with markdown, etc.
+        formatted = message.strip()
+        
+        # Add some basic formatting for better readability
+        if not formatted.endswith(('.', '!', '?')):
+            formatted += '.'
+            
+        return formatted
+        
+    def clarify_request(self, user_input: str) -> Optional[str]:
+        """
+        Clarify ambiguous user requests
         
         Args:
-            task (str): The task that was executed
-            result (dict): The result from execution
-        """
-        history_entry = {
-            "task": task,
-            "response": result,
-            "timestamp": self._get_current_timestamp(),
-            "success": result.get("success", False)
-        }
-        
-        self.conversation_history.append(history_entry)
-        
-        # Keep history size manageable
-        if len(self.conversation_history) > 50:
-            self.conversation_history = self.conversation_history[-50:]
-    
-    def get_conversation_history(self, limit: int = 10) -> List[Dict]:
-        """
-        Get recent conversation history
-        
-        Args:
-            limit (int): Maximum number of entries to return
+            user_input: User's input text
             
         Returns:
-            list: List of conversation entries
+            Clarified input or None if no clarification needed
         """
-        return self.conversation_history[-limit:]
-    
-    def _get_current_timestamp(self) -> str:
-        """
-        Get current timestamp as ISO format string
+        # This could be enhanced with more sophisticated clarification logic
+        input_lower = user_input.lower()
         
-        Returns:
-            str: Current timestamp
-        """
-        from datetime import datetime
-        return datetime.now().isoformat()
-    
-    def can_handle(self, task: str) -> bool:
-        """
-        Determine if this UI agent can handle the given task
-        
-        Args:
-            task (str): The task to check
+        # Example: if user asks for "table" without specifying reservation
+        if 'table' in input_lower and 'réservation' not in input_lower and 'réserver' not in input_lower:
+            return user_input + " (pour une réservation)"
             
-        Returns:
-            bool: True if the task is UI-related
-        """
-        # UI agent handles tasks related to user interaction
-        ui_keywords = [
-            "display", "show", "render", "format", "ui", "interface",
-            "response", "output", "present", "notify", "alert"
-        ]
+        return None
         
-        return any(keyword in task.lower() for keyword in ui_keywords)
+    def get_conversation_context(self) -> Dict[str, Any]:
+        """
+        Get the current conversation context
+        """
+        return self.conversation_context
+        
+    def update_conversation_context(self, context: Dict[str, Any]) -> None:
+        """
+        Update the conversation context
+        """
+        self.conversation_context.update(context)

@@ -1,9 +1,14 @@
 """
 Agents package initialization
 """
-
-from .base_agent import BaseAgent
 from .orchestrator_agent import OrchestratorAgent
 from .ui_agent import UIAgent
+from .restaurant_info_agent import RestaurantInfoAgent
+from .reservation_agent import ReservationAgent
 
-__all__ = ['BaseAgent', 'OrchestratorAgent', 'UIAgent']
+__all__ = [
+    'OrchestratorAgent',
+    'UIAgent', 
+    'RestaurantInfoAgent',
+    'ReservationAgent'
+]
