@@ -13,3 +13,7 @@ torchaudio==2.0.2
 onnxruntime==1.15.1
 pymongo==4.4.1
 dnspython==2.3.0
+# LangChain compatibility fix - use consistent versions
+langchain==0.0.340
+langchain-community==0.0.12
+langchain-core==0.1.20
