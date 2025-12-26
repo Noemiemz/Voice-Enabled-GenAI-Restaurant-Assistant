@@ -1,3 +1,0 @@
-- create app.py for langchain
-- make sure it uses the mistral API
-- integrate with the front

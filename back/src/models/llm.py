@@ -9,12 +9,8 @@ class MistralWrapper():
     def __init__(self, api_key: str = None):
         self.client = Mistral(api_key=api_key)
         self.model = "mistral-small-2506"
-        # Construct absolute path to system prompt file
+
         current_dir = os.path.dirname(os.path.abspath(__file__))
-        prompt_path = os.path.join(current_dir, "..", "data", "prompts", "system_prompt.txt")
-        with open(prompt_path, "r") as f:
-            self.system_prompt = f.read()
-            f.close()
         
         # Setup logging directory
         self.log_dir = os.path.join(current_dir, "..", "data", "logs")
@@ -41,8 +37,6 @@ class MistralWrapper():
     def generate_from_prompt(self, user_prompt: str, history: list[dict[str, str]] = [], **kwargs) -> str:
         print("Generating response from Mistral LLM to prompt:", user_prompt)
         try:
-            if history == []:
-                history = [{"role": "system", "content": self.system_prompt}]
             history.append({"role": "user", "content": user_prompt})
             
             response = self.client.chat.complete(
@@ -122,11 +116,7 @@ class MistralWrapper():
         """
         print("Generating response from Mistral LLM to text:", text)
         try:
-            # Combine system prompt with user input
-            if history == []:
-                history = [{"role": "system", "content": self.system_prompt}]
-            
-            # Add user message
+
             history.append({"role": "user", "content": text})
             
             # Generate response
