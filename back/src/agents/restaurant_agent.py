@@ -14,7 +14,7 @@ import os
 import os
 
 class RestaurantAgent:
-    def __init__(self, llm: Optional[MistralWrapper] = None, use_mock_db: bool = True):
+    def __init__(self, llm: Optional[MistralWrapper] = None, use_mock_db: bool = False):
         """
         Initialize the restaurant agent
         

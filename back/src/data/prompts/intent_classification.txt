@@ -3,7 +3,6 @@ Tu es un assistant qui analyse les demandes des clients d'un restaurant et déte
 Demande du client: "{user_input}"
 
 Outils disponibles:
-- get_menu: Récupère le menu complet du restaurant
 - search_dishes: Recherche des plats spécifiques (nécessite un paramètre 'query')
 - get_reservations: Récupère les informations sur les réservations
 - get_restaurant_info: Donne les informations du restaurant (adresse, horaires, téléphone)
@@ -11,8 +10,7 @@ Outils disponibles:
 - get_available_dishes: Récupère uniquement les plats disponibles
 
 Intents possibles:
-- menu_request: Le client veut voir le menu complet
-- dish_search: Le client cherche un plat spécifique
+- dish_search: Le client cherche un plat spécifique ou tous les plats
 - reservation_request: Le client s'intéresse aux réservations
 - restaurant_info: Le client demande des informations sur le restaurant
 - category_request: Le client veut voir une catégorie spécifique
@@ -23,7 +21,6 @@ Réponds UNIQUEMENT avec un objet JSON valide au format suivant (sans markdown, 
 {{"intent": "nom_de_l_intent", "tool_name": "nom_de_l_outil_ou_null", "tool_params": {{"param": "valeur"}}}}
 
 Exemples:
-- "Quel est votre menu ?" -> {{"intent": "menu_request", "tool_name": "get_menu", "tool_params": {{}}}}
 - "Avez-vous des plats végétariens ?" -> {{"intent": "dish_search", "tool_name": "search_dishes", "tool_params": {{"query": "végétariens"}}}}
 - "Quels sont vos horaires ?" -> {{"intent": "restaurant_info", "tool_name": "get_restaurant_info", "tool_params": {{}}}}
 - "Montrez-moi les desserts" -> {{"intent": "category_request", "tool_name": "get_dishes_by_category", "tool_params": {{"category_name": "Desserts"}}}}
