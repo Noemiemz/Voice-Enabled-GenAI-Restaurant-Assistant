@@ -16,10 +16,10 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 # Import our agent system and models
 from models.llm import MistralWrapper
 from models.mongodb import MongoDBManager
-from agents.ui_agent import UIAgent
-from agents.orchestrator_agent import OrchestratorAgent
-from agents.tools.mongodb_tools import MongoDBTools
-from agents.tools.mock_mongodb_tools import MockMongoDBTool
+from tools.mongodb_tools import MongoDBTools
+from agents.orchestrator import create_orchestrator_agent
+from utils import Context
+
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -39,23 +39,16 @@ try:
         llm = None
 
     # Initialize agents
-    orchestrator = OrchestratorAgent(llm=llm)
+    orchestrator = create_orchestrator_agent()
     database = MongoDBTools()
-    ui_agent = UIAgent(orchestrator=orchestrator, database=database)
     print("[SUCCESS] Agents initialized")
 
 except Exception as e:
     print(f"[ERROR] Error initializing agent system: {e}")
-    # Fallback to mock agent
-    class MockLLM:
-        def generate_from_prompt(self, prompt, history=None):
-            return "Désolé, le système LLM n'est pas disponible pour le moment. Voici une réponse basique."
+    llm = None
+    orchestrator = None
+    database = None
 
-    llm = MockLLM()
-    orchestrator = OrchestratorAgent(llm=llm)
-    database = MockMongoDBTool()
-    ui_agent = UIAgent(orchestrator=orchestrator, database=database)
-    print("[SUCCESS] Fallback Mock Agents initialized")
 
 @app.route('/')
 def home():
@@ -96,22 +89,38 @@ def handle_query():
 
         print(f"[RECEIVED] Query: {user_query}")
 
-        # Process the query with our UI agent
-        response = ui_agent.process_user_input(user_query)
-
-        # Get conversation history from orchestrator
+        # Process the query with our orchestrator agent
+        if orchestrator is None:
+            return jsonify({
+                "error": "Orchestrator not initialized"
+            }), 500
+        
+        # Create a unique session/user ID (you can customize this based on your needs)
+        user_id = request.headers.get('X-User-ID', 'default_user')
+        
+        # Create context for the agent
+        context = Context(user_id=user_id, verbose=True)
+        
+        # Create config for thread management
+        config = {"configurable": {"thread_id": user_id}}
+        
+        # Invoke the orchestrator
+        result = orchestrator.invoke(
+            {"messages": [{"role": "user", "content": user_query}]},
+            config=config,
+            context=context,
+        )
+        
+        # Extract the response
+        response = result["messages"][-1].content if result.get("messages") else "No response"
+        
+        # Build history (last 5 messages)
         history = []
-        for i in range(0, len(orchestrator.conversation_history), 2):
-            if i+1 < len(orchestrator.conversation_history):
+        if result.get("messages"):
+            for msg in result["messages"][-5:]:
                 history.append({
-                    "role": "user",
-                    "content": orchestrator.conversation_history[i]["content"],
-                    "timestamp": datetime.now().isoformat()
-                })
-                history.append({
-                    "role": "assistant",
-                    "content": orchestrator.conversation_history[i+1]["content"],
-                    "timestamp": datetime.now().isoformat()
+                    "role": getattr(msg, 'role', 'assistant'),
+                    "content": getattr(msg, 'content', str(msg))
                 })
 
         return jsonify({
@@ -296,10 +305,12 @@ def health_check():
 def reset_conversation():
     """Reset the conversation history"""
     try:
-        ui_agent.reset_conversation()
+        # Note: With LangChain agents using checkpointer, 
+        # conversation history is managed per thread_id
+        # To reset, the frontend should use a new thread_id/user_id
         return jsonify({
             "success": True,
-            "message": "Conversation history reset"
+            "message": "To reset conversation, use a new session ID in X-User-ID header"
         })
     except Exception as e:
         return jsonify({
