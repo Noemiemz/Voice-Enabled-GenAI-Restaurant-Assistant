@@ -1,28 +1,21 @@
-from supertonic import TTS
-from supertonic.utils import chunk_text
+from piper import PiperVoice, SynthesisConfig, AudioChunk
+from typing import Generator
+import numpy as np
 
-class TextToSpeechModel:
-    def __init__(self):
-        self.tts = TTS(auto_download=True)
+lang_config = {
+    'fr': {
+        'model': PiperVoice.load(f"./src/data/piper_voices/fr_FR-tom-medium.onnx"),
+        'config': SynthesisConfig(length_scale=0.75)
+    },
+    'en': {
+        'model': PiperVoice.load(f"./src/data/piper_voices/en_US-ryan-high.onnx"),
+        'config': SynthesisConfig()
+    },
+}
 
-    def generate_speech(
-        self,
-        text: str,
-        voice_name: str = "M1"
-    ):
-        voice_style = self.tts.get_voice_style(voice_name=voice_name)
-        wav, duration = self.tts.synthesize(text=text, voice_style=voice_style)
+def stream_speech(text: str, language: str) -> Generator[tuple[np.ndarray, int], None, None]:
+    voice: PiperVoice = lang_config.get(language, lang_config['en'])['model']
+    config: SynthesisConfig = lang_config.get(language, lang_config['en'])['config']
 
-        return wav, duration, self.tts.sample_rate
-    
-    def stream_speech(
-        self,
-        text: str,
-        voice_name: str = "M1"
-    ):
-        voice_style = self.tts.get_voice_style(voice_name=voice_name)
-        text_list = chunk_text(text, max_len=1)  # max_len=1 will chunk by sentences
-
-        for chunk in text_list:
-            wav, duration = self.tts.synthesize(text=chunk, voice_style=voice_style)
-            yield wav, duration, self.tts.sample_rate
+    for chunk in voice.synthesize(text, config):
+        yield chunk.audio_int16_array, chunk.sample_rate
