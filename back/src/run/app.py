@@ -1,6 +1,6 @@
 """
 Flask API for the Voice-Enabled GenAI Restaurant Assistant
-This API connects the frontend with the agent system and database
+This API connects the frontend with the new agent system and database
 """
 
 import os
@@ -16,7 +16,10 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 # Import our agent system and models
 from models.llm import MistralWrapper
 from models.mongodb import MongoDBManager
-from agents.restaurant_agent import RestaurantAgent
+from agents.ui_agent import UIAgent
+from agents.orchestrator_agent import OrchestratorAgent
+from agents.tools.mongodb_tools import MongoDBTools
+from agents.tools.mock_mongodb_tools import MockMongoDBTool
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -34,21 +37,25 @@ try:
     else:
         print("[WARNING] No Mistral API key found, using mock LLM")
         llm = None
-        
-    # Initialize agent
-    agent = RestaurantAgent(llm=llm, use_mock_db=not db_manager.connected)
-    print("[SUCCESS] Restaurant Agent initialized")
-    
+
+    # Initialize agents
+    orchestrator = OrchestratorAgent(llm=llm)
+    database = MongoDBTools()
+    ui_agent = UIAgent(orchestrator=orchestrator, database=database)
+    print("[SUCCESS] Agents initialized")
+
 except Exception as e:
     print(f"[ERROR] Error initializing agent system: {e}")
     # Fallback to mock agent
     class MockLLM:
         def generate_from_prompt(self, prompt, history=None):
             return "Désolé, le système LLM n'est pas disponible pour le moment. Voici une réponse basique."
-    
+
     llm = MockLLM()
-    agent = RestaurantAgent(llm=llm, use_mock_db=True)
-    print("[SUCCESS] Fallback Mock Agent initialized")
+    orchestrator = OrchestratorAgent(llm=llm)
+    database = MockMongoDBTool()
+    ui_agent = UIAgent(orchestrator=orchestrator, database=database)
+    print("[SUCCESS] Fallback Mock Agents initialized")
 
 @app.route('/')
 def home():
@@ -59,7 +66,7 @@ def home():
         "version": "1.0.0",
         "endpoints": [
             "/query",
-            "/menu", 
+            "/menu",
             "/dishes",
             "/reservations",
             "/info"
@@ -74,46 +81,46 @@ def handle_query():
     """
     try:
         data = request.get_json()
-        
+
         if not data or 'query' not in data:
             return jsonify({
                 "error": "Missing query parameter"
             }), 400
-            
+
         user_query = data['query']
-        
+
         if not user_query or user_query.strip() == "":
             return jsonify({
                 "error": "Empty query"
             }), 400
-            
+
         print(f"[RECEIVED] Query: {user_query}")
-        
-        # Process the query with our agent
-        response = agent.process_user_input(user_query)
-        
-        # Get conversation history
+
+        # Process the query with our UI agent
+        response = ui_agent.process_user_input(user_query)
+
+        # Get conversation history from orchestrator
         history = []
-        for i in range(0, len(agent.conversation_history), 2):
-            if i+1 < len(agent.conversation_history):
+        for i in range(0, len(orchestrator.conversation_history), 2):
+            if i+1 < len(orchestrator.conversation_history):
                 history.append({
                     "role": "user",
-                    "content": agent.conversation_history[i]["content"],
+                    "content": orchestrator.conversation_history[i]["content"],
                     "timestamp": datetime.now().isoformat()
                 })
                 history.append({
-                    "role": "assistant", 
-                    "content": agent.conversation_history[i+1]["content"],
+                    "role": "assistant",
+                    "content": orchestrator.conversation_history[i+1]["content"],
                     "timestamp": datetime.now().isoformat()
                 })
-        
+
         return jsonify({
             "response": response,
             "agent_processing": True,
             "history": history,
             "timestamp": datetime.now().isoformat()
         })
-        
+
     except Exception as e:
         print(f"[ERROR] Processing query failed: {e}")
         return jsonify({
@@ -125,22 +132,18 @@ def handle_query():
 def get_menu():
     """Get the restaurant menu"""
     try:
-        if db_manager.connected:
-            menu_data = db_manager.get_menu()
-        else:
-            menu_data = agent.tools.get_menu()
-            
+        menu_data = database.get_menu()
         if not menu_data:
             return jsonify({
                 "error": "Menu not available"
             }), 404
-            
+
         # Ensure consistent format
         if "categories" not in menu_data:
             menu_data = {"categories": []}
-            
+
         return jsonify(menu_data)
-        
+
     except Exception as e:
         print(f"[ERROR] Fetching menu failed: {e}")
         return jsonify({
@@ -152,32 +155,28 @@ def get_menu():
 def get_dishes():
     """Get all dishes grouped by category"""
     try:
-        if db_manager.connected:
-            dishes_by_category = db_manager.get_dishes_by_category()
-        else:
-            # Get from mock tools and format properly
-            menu_data = agent.tools.get_menu()
-            dishes_by_category = {}
-            
-            for category in menu_data.get("categories", []):
-                category_name = category["name"]
-                dishes = []
-                
-                for item in category.get("items", []):
-                    dish = {
-                        "_id": f"dish_{category_name.lower()}_{item['name'].lower().replace(' ', '_')}",
-                        "name": item["name"],
-                        "category": category_name,
-                        "ingredients": [],  # Would be populated from real DB
-                        "is_vegetarian": False,  # Would be populated from real DB
-                        "price": float(item["price"].replace("€", "").strip())
-                    }
-                    dishes.append(dish)
-                
-                dishes_by_category[category_name] = dishes
-        
+        menu_data = database.get_menu()
+        dishes_by_category = {}
+
+        for category in menu_data.get("categories", []):
+            category_name = category["name"]
+            dishes = []
+
+            for item in category.get("items", []):
+                dish = {
+                    "_id": f"dish_{category_name.lower()}_{item['name'].lower().replace(' ', '_')}",
+                    "name": item["name"],
+                    "category": category_name,
+                    "ingredients": [],
+                    "is_vegetarian": False,
+                    "price": float(item["price"].replace("€", "").strip())
+                }
+                dishes.append(dish)
+
+            dishes_by_category[category_name] = dishes
+
         return jsonify(dishes_by_category)
-        
+
     except Exception as e:
         print(f"[ERROR] Fetching dishes failed: {e}")
         return jsonify({
@@ -190,12 +189,12 @@ def create_reservation():
     """Create a new reservation"""
     try:
         data = request.get_json()
-        
+
         if not data:
             return jsonify({
                 "error": "No reservation data provided"
             }), 400
-            
+
         # Validate required fields
         required_fields = ['name', 'phone', 'date', 'time', 'guests']
         for field in required_fields:
@@ -203,20 +202,23 @@ def create_reservation():
                 return jsonify({
                     "error": f"Missing required field: {field}"
                 }), 400
-        
-        # Create reservation
+
+        # Create reservation (assuming db_manager or database agent handles this)
         try:
             if db_manager.connected:
                 reservation = db_manager.create_reservation(data)
             else:
-                reservation = agent.tools.create_reservation(data)
-            
+                return jsonify({
+                    "success": False,
+                    "error": "Reservations not supported in mock mode"
+                }), 500
+
             if not reservation:
                 return jsonify({
                     "success": False,
                     "error": "Failed to create reservation"
                 }), 500
-                
+
         except Exception as e:
             print(f"[ERROR] Reservation creation failed: {e}")
             return jsonify({
@@ -224,7 +226,7 @@ def create_reservation():
                 "error": "Failed to create reservation",
                 "details": str(e)
             }), 500
-            
+
         # Format response to match frontend expectations
         formatted_reservation = {
             "success": True,
@@ -240,9 +242,9 @@ def create_reservation():
                 "status": reservation.get("status", "confirmed")
             }
         }
-        
+
         return jsonify(formatted_reservation)
-        
+
     except Exception as e:
         print(f"[ERROR] Creating reservation failed: {e}")
         return jsonify({
@@ -255,11 +257,8 @@ def create_reservation():
 def get_restaurant_info():
     """Get restaurant information"""
     try:
-        if db_manager.connected:
-            info = db_manager.get_restaurant_info()
-        else:
-            info = agent.tools.get_restaurant_info()
-        
+        info = database.get_restaurant_info()
+
         # Ensure all required fields are present
         default_info = {
             "name": "Les Pieds dans le Plat",
@@ -268,14 +267,14 @@ def get_restaurant_info():
             "openingHours": "11:00 AM - 01:00 AM",
             "description": "Un restaurant traditionnel français au cœur de Paris, offrant une cuisine raffinée dans une ambiance chaleureuse."
         }
-        
+
         # Merge with actual info
         for key, value in default_info.items():
             if key not in info:
                 info[key] = value
-        
+
         return jsonify(info)
-        
+
     except Exception as e:
         print(f"[ERROR] Fetching restaurant info failed: {e}")
         return jsonify({
@@ -297,7 +296,7 @@ def health_check():
 def reset_conversation():
     """Reset the conversation history"""
     try:
-        agent.reset_conversation()
+        ui_agent.reset_conversation()
         return jsonify({
             "success": True,
             "message": "Conversation history reset"
@@ -326,7 +325,7 @@ def internal_error(error):
 if __name__ == '__main__':
     # Get port from environment or use default
     port = int(os.environ.get('PORT', 5000))
-    
+
     print(f"[LAUNCH] Starting Restaurant Assistant API on port {port}")
     print(f"[INFO] Database status: {'Connected' if db_manager.connected else 'Using mock data'}")
     print(f"[INFO] LLM status: {'Connected' if llm and hasattr(llm, 'client') else 'Using mock LLM'}")
@@ -340,5 +339,5 @@ if __name__ == '__main__':
     print("   GET    /info          - Get restaurant info")
     print("   GET    /health        - Health check")
     print("   POST   /reset         - Reset conversation")
-    
+
     app.run(host='0.0.0.0', port=port, debug=True)
