@@ -1,7 +1,5 @@
 from mistralai import Mistral
-from smolagents import Model
 import json
-from smolagents.models import ChatMessage
 from datetime import datetime
 import os
 
@@ -18,7 +16,6 @@ class MistralWrapper():
     
     def _log_interaction(self, method_name: str, input_data: dict, output_data: str):
         """Log LLM interactions to a file"""
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
         log_entry = {
             "timestamp": datetime.now().isoformat(),
             "method": method_name,
@@ -69,7 +66,7 @@ class MistralWrapper():
             )
             return fallback_response
 
-    def generate_from_messages(self, messages: list[ChatMessage], **kwargs) -> str:
+    def generate_from_messages(self, messages: list[dict], **kwargs) -> str:
         print("Generating response from Mistral LLM to messages:", messages)
         msg_formatted = [msg.dict() for msg in messages]
         for msg in msg_formatted:

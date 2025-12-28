@@ -6,7 +6,7 @@ from dataclasses import dataclass
 
 from tools.mongodb_tools import MongoDBTools
 from langchain.agents.structured_output import ToolStrategy
-from utils import Context
+from utils import Context, get_prompt_content
 
 
 @dataclass
@@ -18,15 +18,6 @@ class MenuAgentResponse:
     info: Optional[Dict] = None  # Restaurant info (if requested)
     error: Optional[str] = None  # Error message (if any)
 
-SYSTEM_PROMPT_MENU = """
-You are a helpful restaurant assistant connected to the menu database.
-You can help users with the following tasks:
-- Get the restaurant menu or menu categories
-- Search for dishes by name or description
-- Get dishes by category
-
-Use the provided tools to answer user queries.
-"""
 
 def create_menu_agent():
     """Create and return the menu agent."""
@@ -38,9 +29,11 @@ def create_menu_agent():
         model='mistral-small-latest'
     )
     
+    system_prompt = get_prompt_content("menu_system.txt")
+    
     menu_agent = create_agent(
         model=model,
-        system_prompt=SYSTEM_PROMPT_MENU,
+        system_prompt=system_prompt,
         tools=menu_tools,
         context_schema=Context,
         response_format=ToolStrategy(MenuAgentResponse),

@@ -4,7 +4,7 @@ import os
 from langchain_core.tools import tool
 from langchain.tools import ToolRuntime
 
-from utils import Context, _thread_config_from_context
+from utils import Context, _thread_config_from_context, get_prompt_content
 from agents.menu_agent import create_menu_agent
 from agents.faq_agent import create_faq_agent
 
@@ -62,8 +62,7 @@ def use_menu_tool(runtime: ToolRuntime[Context], query: str) -> str:
 
 def create_orchestrator_agent():
     """Create and return the orchestrator agent."""
-    prompts_path = "C:\\Users\\lorra\\OneDrive - De Vinci\\A5\\LLM\\projeeeect\\Voice-Enabled-GenAI-Restaurant-Assistant\\back\\src\\data\\prompts_lanchain\\system_prompt.txt"
-    SYSTEM_PROMPT = open(prompts_path, 'r').read()
+    system_prompt = get_prompt_content("orchestrator_system.txt")
     
     model = ChatMistralAI(
         mistral_api_key=os.getenv("MISTRAL_API_KEY"),
@@ -72,7 +71,7 @@ def create_orchestrator_agent():
         
     orchestrator = create_agent(
         model=model,
-        system_prompt=SYSTEM_PROMPT, 
+        system_prompt=system_prompt, 
         tools=[use_menu_tool, use_faq_tool],
         context_schema=Context,
     )

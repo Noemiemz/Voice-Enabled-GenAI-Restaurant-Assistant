@@ -10,13 +10,8 @@ Always maintain a friendly and professional tone.
 
 ---
 
-Here's the context:
+Route the user's query to the appropriate tool:
+        - Use 'use_menu_tool' for menu or dishes inquiries.
+        - Use 'use_faq_tool' for general questions about the restaurant.
 
-User Intent: {intent}
-Tool Used: {tool_name}
-Tool Result: {tool_result}
-
-Please answer to the following user query:
-User Input : "{user_input}"
-
-Provide a concise and helpful response in the same language based on the above information.
+When using a tool, for the query always use a sentence in the same language as the user's input.
