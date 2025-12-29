@@ -49,6 +49,10 @@ def create_orchestrator_agent(agent_manager):
             timer.context["response_length"] = len(response_str)
             timer.context["response_preview"] = response_str[:100] + "..." if len(response_str) > 100 else response_str
             timer.context["response_full"] = response_str
+            
+            # Log the sub-agent interaction in the main conversation context
+            if runtime.context.verbose:
+                print(f"[orchestrator <- faq_agent] response={response_str[:100]!r}...")
         return response_str
 
     @tool
@@ -90,6 +94,10 @@ def create_orchestrator_agent(agent_manager):
             timer.context["response_full"] = response_str
             timer.context["agent_retrieval_time"] = round(agent_retrieval_duration, 6)
             timer.context["agent_processing_time"] = round(agent_invocation_duration, 6)
+            
+            # Log the sub-agent interaction in the main conversation context
+            if runtime.context.verbose:
+                print(f"[orchestrator <- menu_agent] response={response_str[:100]!r}...")
         
         # Log total menu tool execution time
         menu_agent_duration = time.time() - menu_agent_start
@@ -130,6 +138,10 @@ def create_orchestrator_agent(agent_manager):
             timer.context["response_length"] = len(response_str)
             timer.context["response_preview"] = response_str[:100] + "..." if len(response_str) > 100 else response_str
             timer.context["response_full"] = response_str
+            
+            # Log the sub-agent interaction in the main conversation context
+            if runtime.context.verbose:
+                print(f"[orchestrator <- reservation_agent] response={response_str[:100]!r}...")
         return response_str
     
     system_prompt = get_prompt_content("orchestrator_system.txt")

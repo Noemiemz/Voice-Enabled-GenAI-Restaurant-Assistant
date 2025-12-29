@@ -23,6 +23,7 @@ from agents.orchestrator import create_orchestrator_agent
 from agents.agent_manager import AgentManager
 from utils.utils import Context
 from utils.timing import log_timing, start_timing, end_timing
+from utils.session_manager import SessionManager
 
 
 # Initialize Flask app
@@ -32,6 +33,7 @@ CORS(app, resources={r"/*": {"origins": "*"}})
 # Initialize components
 db_manager = MongoDBManager()
 agent_manager = AgentManager()
+session_manager = SessionManager()
 
 # Try to initialize LLM (will use mock if API key not available)
 try:
@@ -65,6 +67,8 @@ def home():
         "version": "1.0.0",
         "endpoints": [
             "/query",
+            "/session",
+            "/reset",
             "/menu",
             "/dishes",
             "/reservations",
@@ -77,7 +81,7 @@ def home():
 def handle_query():
     """
     Handle user queries (both text and audio)
-    Expected JSON: {"query": "user message"}
+    Expected JSON: {"query": "user message", "session_id": "optional_session_id"}
     """
     # Generate a unique query ID for tracking
     query_id = str(uuid.uuid4())
@@ -108,14 +112,31 @@ def handle_query():
                 "error": "Orchestrator not initialized"
             }), 500
         
-        # Create a unique session/user ID (you can customize this based on your needs)
+        # Get user ID from headers
         user_id = request.headers.get('X-User-ID', 'default_user')
         
-        # Create context for the agent with query_id
+        # Get or create session ID using session manager
+        session_id = data.get('session_id')
+        if not session_id:
+            # Create a new session if none provided
+            session_id = session_manager.create_session(user_id)
+            print(f"[SESSION] Created new session {session_id} for user {user_id}")
+        else:
+            # Validate/update existing session
+            session_info = session_manager.get_session(session_id)
+            if session_info:
+                print(f"[SESSION] Using existing session {session_id} for user {user_id}")
+            else:
+                # Session not found, create new one
+                session_id = session_manager.create_session(user_id)
+                print(f"[SESSION] Session {session_id} not found, created new session for user {user_id}")
+        
+        # Create context for the agent with query_id and session_id
         context = Context(user_id=user_id, query_id=query_id, verbose=True)
         
-        # Create config for thread management
-        config = {"configurable": {"thread_id": user_id}}
+        # Create config for thread management using user_id:session_id combination
+        thread_id = f"{user_id}:{session_id}"
+        config = {"configurable": {"thread_id": thread_id}}
         
         # Start timing orchestrator processing
         orchestrator_start = time.time()
@@ -163,13 +184,15 @@ def handle_query():
         })
         
         
-        # Build history (last 5 messages)
+        # Build comprehensive history with timestamps
         history = []
         if result.get("messages"):
-            for msg in result["messages"][-5:]:
+            for i, msg in enumerate(result["messages"]):
                 history.append({
+                    "id": i,
                     "role": getattr(msg, 'role', 'assistant'),
-                    "content": getattr(msg, 'content', str(msg))
+                    "content": getattr(msg, 'content', str(msg)),
+                    "timestamp": datetime.now().isoformat()
                 })
 
         # Calculate total query processing time
@@ -179,22 +202,26 @@ def handle_query():
         log_timing("total_query_processing", total_duration, {
             "query_id": query_id,
             "user_id": user_id,
+            "session_id": session_id,
             "query_length": len(user_query),
             "response_length": len(response),
             "orchestrator_time": round(orchestrator_duration, 6),
             "overhead_time": round(total_duration - orchestrator_duration, 6),
             "success": True,
-            "endpoint": "/query"
+            "endpoint": "/query",
+            "messages_count": len(history)
         })
 
         return jsonify({
             "response": response,
             "agent_processing": True,
             "history": history,
+            "session_id": session_id,
             "timestamp": datetime.now().isoformat(),
             "performance": {
                 "total_processing_time": round(total_duration, 6),
-                "orchestrator_time": round(orchestrator_duration, 6)
+                "orchestrator_time": round(orchestrator_duration, 6),
+                "history_length": len(history)
             }
         })
 
@@ -378,19 +405,54 @@ def health_check():
         "status": "healthy",
         "timestamp": datetime.now().isoformat(),
         "database": "connected" if db_manager.connected else "mock",
-        "llm": "connected" if llm and hasattr(llm, 'client') else "mock"
+        "llm": "connected" if llm and hasattr(llm, 'client') else "mock",
+        "sessions": {
+            "active": session_manager.get_active_sessions_count(),
+            "total": session_manager.get_session_count()
+        }
     })
+
+@app.route('/session', methods=['POST'])
+def create_session():
+    """Create a new conversation session"""
+    try:
+        user_id = request.headers.get('X-User-ID', 'default_user')
+        session_id = session_manager.create_session(user_id)
+        
+        print(f"[SESSION] Created new session {session_id} for user {user_id}")
+        
+        return jsonify({
+            "success": True,
+            "session_id": session_id,
+            "user_id": user_id,
+            "message": "New conversation session created"
+        })
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
 
 @app.route('/reset', methods=['POST'])
 def reset_conversation():
     """Reset the conversation history"""
     try:
-        # Note: With LangChain agents using checkpointer, 
-        # conversation history is managed per thread_id
-        # To reset, the frontend should use a new thread_id/user_id
+        user_id = request.headers.get('X-User-ID', 'default_user')
+        
+        # Get current session ID from request if available
+        data = request.get_json()
+        current_session_id = data.get('session_id') if data else None
+        
+        # Reset session using session manager
+        new_session_id = session_manager.reset_session(user_id, current_session_id)
+        
+        print(f"[SESSION] Reset conversation for user {user_id}, old session: {current_session_id}, new session: {new_session_id}")
+        
         return jsonify({
             "success": True,
-            "message": "To reset conversation, use a new session ID in X-User-ID header"
+            "old_session_id": current_session_id,
+            "new_session_id": new_session_id,
+            "message": "Conversation reset, use this new session ID for fresh conversation"
         })
     except Exception as e:
         return jsonify({
@@ -472,6 +534,11 @@ def shutdown_handler():
     if 'agent_manager' in globals() and agent_manager.is_initialized:
         agent_manager.cleanup()
         print("[SHUTDOWN] Agent manager cleaned up")
+    
+    if 'session_manager' in globals():
+        cleaned_up = session_manager.cleanup_inactive_sessions()
+        print(f"[SHUTDOWN] Session manager cleaned up {cleaned_up} inactive sessions")
+        print(f"[SHUTDOWN] Active sessions: {session_manager.get_active_sessions_count()}")
 
 if __name__ == '__main__':
     # Get port from environment or use default
@@ -484,12 +551,13 @@ if __name__ == '__main__':
     print("\n[INFO] Available endpoints:")
     print("   GET    /              - Home")
     print("   POST   /query         - Handle user queries")
+    print("   POST   /session       - Create new conversation session")
+    print("   POST   /reset         - Reset conversation (creates new session)")
     print("   GET    /menu          - Get restaurant menu")
     print("   GET    /dishes        - Get all dishes by category")
     print("   POST   /reservations  - Create reservation")
     print("   GET    /info          - Get restaurant info")
     print("   GET    /health        - Health check")
-    print("   POST   /reset         - Reset conversation")
     print("   GET    /performance/logs - Get performance logs")
 
     # Register shutdown handler
