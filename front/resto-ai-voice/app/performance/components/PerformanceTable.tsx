@@ -98,6 +98,12 @@ export default function PerformanceTable({ logs }: PerformanceTableProps) {
             </th>
             <th
               scope="col"
+              className="px-6 py-3 text-left text-xs font-medium text-orange-700 uppercase tracking-wider"
+            >
+              Query ID
+            </th>
+            <th
+              scope="col"
               className="px-6 py-3 text-left text-xs font-medium text-orange-700 uppercase tracking-wider cursor-pointer"
               onClick={() => requestSort('duration_seconds')}
             >
@@ -148,6 +154,15 @@ export default function PerformanceTable({ logs }: PerformanceTableProps) {
                     {agentName}
                   </span>
                 </td>
+                <td className="px-6 py-4 text-xs text-gray-800 font-mono">
+                  {log.context?.query_id ? (
+                    <span className="truncate inline-block max-w-[120px]" title={log.context.query_id}>
+                      {log.context.query_id.split('-')[0]}...
+                    </span>
+                  ) : (
+                    <span className="text-gray-700">-</span>
+                  )}
+                </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-orange-900">
                   {log.duration_seconds.toFixed(3)}
                 </td>
@@ -157,7 +172,7 @@ export default function PerformanceTable({ logs }: PerformanceTableProps) {
                       {/* Collapsed Preview */}
                       {!isExpanded && (
                         <div className="flex items-center gap-2">
-                          <div className="text-xs text-gray-600 truncate max-w-md">
+                          <div className="text-xs text-gray-800 truncate max-w-md">
                             {log.context.query_preview && (
                               <span className="italic">"{log.context.query_preview}"</span>
                             )}
@@ -195,13 +210,23 @@ export default function PerformanceTable({ logs }: PerformanceTableProps) {
                             </button>
                           </div>
                           
+                          {/* Query ID */}
+                          {log.context.query_id && (
+                            <div className="bg-purple-50 p-3 rounded text-xs">
+                              <span className="font-semibold text-purple-800">Query ID:</span>
+                              <div className="ml-1 text-gray-900 bg-white p-2 rounded mt-1 font-mono break-all">
+                                {log.context.query_id}
+                              </div>
+                            </div>
+                          )}
+                          
                           {/* Query/Response Preview */}
                           {(log.context.query_preview || log.context.response_preview || log.context.query_full || log.context.response_full) && (
                             <div className="bg-orange-50 p-3 rounded text-xs">
                               {(log.context.query_full || log.context.query_preview) && (
                                 <div className="mb-2">
                                   <span className="font-semibold text-orange-800">Query:</span>
-                                  <div className="ml-1 text-gray-700 bg-white p-2 rounded mt-1 whitespace-pre-wrap break-words">
+                                  <div className="ml-1 text-gray-900 bg-white p-2 rounded mt-1 whitespace-pre-wrap break-words">
                                     {log.context.query_full || log.context.query_preview}
                                   </div>
                                 </div>
@@ -209,7 +234,7 @@ export default function PerformanceTable({ logs }: PerformanceTableProps) {
                               {(log.context.response_full || log.context.response_preview) && (
                                 <div>
                                   <span className="font-semibold text-orange-800">Response:</span>
-                                  <div className="ml-1 text-gray-700 bg-white p-2 rounded mt-1 whitespace-pre-wrap break-words">
+                                  <div className="ml-1 text-gray-900 bg-white p-2 rounded mt-1 whitespace-pre-wrap break-words">
                                     {log.context.response_full || log.context.response_preview}
                                   </div>
                                 </div>
@@ -245,8 +270,8 @@ export default function PerformanceTable({ logs }: PerformanceTableProps) {
                                                      'tokens_total', 'tokens_prompt', 'tokens_completion'].includes(key))
                                 .map(([key, value]) => (
                                   <div key={key} className="flex flex-col">
-                                    <span className="font-medium text-gray-700">{key}:</span>
-                                    <span className="text-gray-600 break-words">
+                                    <span className="font-medium text-gray-900">{key}:</span>
+                                    <span className="text-gray-800 break-words">
                                       {typeof value === 'object' ? JSON.stringify(value, null, 2) : String(value)}
                                     </span>
                                   </div>

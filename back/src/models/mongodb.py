@@ -1,4 +1,5 @@
 import os
+import time
 from pymongo import MongoClient
 from pymongo.errors import ConnectionFailure, OperationFailure
 from typing import Optional, Dict, Any, List
@@ -56,6 +57,22 @@ class MongoDBManager:
     def _ensure_connected(self):
         if not self.connected:
             self._connect()
+    
+    def _log_timing(self, operation: str, duration: float, context: Optional[Dict[str, Any]] = None):
+        """Log timing information for MongoDB operations."""
+        try:
+            from utils.timing import log_timing as external_log_timing
+            # Add MongoDB-specific context
+            if context is None:
+                context = {}
+            context["mongodb_connected"] = self.connected
+            context["mongodb_uri"] = "connected" if self.connected else "disconnected"
+            external_log_timing(operation, duration, context)
+        except ImportError:
+            # Fallback logging if timing module not available
+            print(f"[MONGODB_TIMING] {operation}: {duration:.6f}s - {context}")
+        except Exception as e:
+            print(f"[MONGODB_TIMING_ERROR] Failed to log timing: {e}")
     
 
     # ===== Collection Accessors =====
@@ -169,9 +186,30 @@ class MongoDBManager:
         if self.dishes is None:
             return []
         try:
+            # Start timing the MongoDB query
+            query_start = time.time()
             dishes = list(self.dishes.find())
+            query_duration = time.time() - query_start
+            
+            # Start timing the ID conversion
+            conversion_start = time.time()
             for d in dishes:
                 d["_id"] = str(d["_id"])
+            conversion_duration = time.time() - conversion_start
+            
+            # Log the timing information
+            self._log_timing("mongodb_query", query_duration, {
+                "operation": "dishes.find()",
+                "dishes_count": len(dishes),
+                "collection": "dishes"
+            })
+            
+            self._log_timing("mongodb_conversion", conversion_duration, {
+                "operation": "id_conversion",
+                "dishes_count": len(dishes),
+                "collection": "dishes"
+            })
+            
             return dishes
         except Exception as e:
             print(f"Error getting dishes: {e}")

@@ -1,12 +1,13 @@
 from langchain.agents import create_agent
 from langchain_mistralai import ChatMistralAI
 import os
+import time
 from langchain_core.tools import tool
 from langchain.tools import ToolRuntime
 from langgraph.checkpoint.memory import MemorySaver
 
 from utils.utils import Context, _thread_config_from_context, get_prompt_content, LLMLoggingCallback, TimingCallbackHandler
-from utils.timing import TimingContext
+from utils.timing import TimingContext, log_timing
 
 import dotenv
 dotenv.load_dotenv()
@@ -29,6 +30,7 @@ def create_orchestrator_agent(agent_manager):
             print(f"[orchestrator -> faq_agent] query={query!r}")
         
         with TimingContext("agent_invocation", {
+            "query_id": runtime.context.query_id,
             "agent_name": "faq",
             "query_length": len(query),
             "query_preview": query[:50] + "..." if len(query) > 50 else query,
@@ -55,7 +57,11 @@ def create_orchestrator_agent(agent_manager):
         if runtime.context.verbose:
             print(f"[orchestrator -> menu_agent] query={query!r}")
         
+        # Start timing the menu agent invocation
+        menu_agent_start = time.time()
+        
         with TimingContext("agent_invocation", {
+            "query_id": runtime.context.query_id,
             "agent_name": "menu",
             "query_length": len(query),
             "query_preview": query[:50] + "..." if len(query) > 50 else query,
@@ -64,17 +70,38 @@ def create_orchestrator_agent(agent_manager):
             "invoked_by": "orchestrator",
             "tool_name": "use_menu_tool"
         }) as timer:
+            # Start timing agent retrieval
+            agent_retrieval_start = time.time()
             menu_agent = agent_manager.get_agent('menu')
+            agent_retrieval_duration = time.time() - agent_retrieval_start
+            
+            # Start timing agent invocation
+            agent_invocation_start = time.time()
             resp = menu_agent.invoke(
                 {"messages": [{"role": "user", "content": query}]},
                 config=_thread_config_from_context(runtime),
                 context=runtime.context,
             )
+            agent_invocation_duration = time.time() - agent_invocation_start
             
             response_str = str(resp["messages"][-1].content)
             timer.context["response_length"] = len(response_str)
             timer.context["response_preview"] = response_str[:100] + "..." if len(response_str) > 100 else response_str
             timer.context["response_full"] = response_str
+            timer.context["agent_retrieval_time"] = round(agent_retrieval_duration, 6)
+            timer.context["agent_processing_time"] = round(agent_invocation_duration, 6)
+        
+        # Log total menu tool execution time
+        menu_agent_duration = time.time() - menu_agent_start
+        log_timing("menu_tool_execution", menu_agent_duration, {
+            "query_id": runtime.context.query_id,
+            "user_id": runtime.context.user_id,
+            "query_length": len(query),
+            "response_length": len(response_str),
+            "agent_retrieval_time": round(agent_retrieval_duration, 6),
+            "agent_processing_time": round(agent_invocation_duration, 6)
+        })
+        
         return response_str
 
     @tool
@@ -84,6 +111,7 @@ def create_orchestrator_agent(agent_manager):
             print(f"[orchestrator -> reservation_agent] query={query!r}")
         
         with TimingContext("agent_invocation", {
+            "query_id": runtime.context.query_id,
             "agent_name": "reservation",
             "query_length": len(query),
             "query_preview": query[:50] + "..." if len(query) > 50 else query,

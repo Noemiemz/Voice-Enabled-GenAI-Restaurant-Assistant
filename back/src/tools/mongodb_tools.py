@@ -1,6 +1,8 @@
 from models.mongodb import MongoDBManager
 from langchain_core.tools import tool
 from typing import Optional, Dict, List
+import time
+from utils.timing import log_timing
 
 class MongoDBTools:
     def __init__(self):
@@ -45,8 +47,32 @@ class MongoDBTools:
         @tool
         def get_available_dishes() -> List[Dict]:
             """Get all available dishes"""
+            # Start timing database operation
+            db_start = time.time()
+            
             all_dishes = self.db_manager.get_all_dishes()
-            return [dish for dish in all_dishes if dish.get("available", True)]
+            
+            # Log database operation time
+            db_duration = time.time() - db_start
+            log_timing("mongodb_get_all_dishes", db_duration, {
+                "operation": "get_all_dishes",
+                "dishes_count": len(all_dishes),
+                "tool_name": "get_available_dishes"
+            })
+            
+            # Start timing filtering operation
+            filter_start = time.time()
+            available_dishes = [dish for dish in all_dishes if dish.get("available", True)]
+            filter_duration = time.time() - filter_start
+            
+            # Log filtering time
+            log_timing("dish_filtering", filter_duration, {
+                "total_dishes": len(all_dishes),
+                "available_dishes": len(available_dishes),
+                "tool_name": "get_available_dishes"
+            })
+            
+            return available_dishes
 
         return [
             # get_menu,

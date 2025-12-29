@@ -6,6 +6,7 @@ This API connects the frontend with the new agent system and database
 import os
 import sys
 import time
+import uuid
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from datetime import datetime
@@ -78,6 +79,9 @@ def handle_query():
     Handle user queries (both text and audio)
     Expected JSON: {"query": "user message"}
     """
+    # Generate a unique query ID for tracking
+    query_id = str(uuid.uuid4())
+    
     # Start timing the entire query processing
     query_start = time.time()
     
@@ -96,7 +100,7 @@ def handle_query():
                 "error": "Empty query"
             }), 400
 
-        print(f"[RECEIVED] Query: {user_query}")
+        print(f"[RECEIVED] Query ({query_id}): {user_query}")
 
         # Process the query with our orchestrator agent
         if orchestrator is None:
@@ -107,14 +111,17 @@ def handle_query():
         # Create a unique session/user ID (you can customize this based on your needs)
         user_id = request.headers.get('X-User-ID', 'default_user')
         
-        # Create context for the agent
-        context = Context(user_id=user_id, verbose=True)
+        # Create context for the agent with query_id
+        context = Context(user_id=user_id, query_id=query_id, verbose=True)
         
         # Create config for thread management
         config = {"configurable": {"thread_id": user_id}}
         
         # Start timing orchestrator processing
         orchestrator_start = time.time()
+        
+        # Start timing orchestrator decision making
+        decision_start = time.time()
         
         # Invoke the orchestrator
         result = orchestrator.invoke(
@@ -123,12 +130,23 @@ def handle_query():
             context=context,
         )
         
+        # Log orchestrator decision making time
+        decision_duration = time.time() - decision_start
+        log_timing("orchestrator_decision", decision_duration, {
+            "query_id": query_id,
+            "user_id": user_id,
+            "query_length": len(user_query),
+            "query_preview": user_query[:50] + "..." if len(user_query) > 50 else user_query,
+            "query_full": user_query,
+        })
+        
         # Extract the response
         response = result["messages"][-1].content if result.get("messages") else "No response"
         
         # Log orchestrator processing time
         orchestrator_duration = time.time() - orchestrator_start
         log_timing("agent_invocation", orchestrator_duration, {
+            "query_id": query_id,
             "user_id": user_id,
             "agent_name": "orchestrator",
             "query_length": len(user_query),
@@ -139,7 +157,9 @@ def handle_query():
             "messages_count": len(result.get("messages", [])),
             "response_length": len(response),
             "response_preview": response[:100] + "..." if len(response) > 100 else response,
-            "response_full": response
+            "response_full": response,
+            "decision_time": round(decision_duration, 6),
+            "tool_execution_time": round(orchestrator_duration - decision_duration, 6)
         })
         
         
@@ -157,6 +177,7 @@ def handle_query():
         
         # Log total processing time
         log_timing("total_query_processing", total_duration, {
+            "query_id": query_id,
             "user_id": user_id,
             "query_length": len(user_query),
             "response_length": len(response),
@@ -183,6 +204,7 @@ def handle_query():
         # Log error processing time
         error_duration = time.time() - query_start
         log_timing("query_error_processing", error_duration, {
+            "query_id": query_id if 'query_id' in locals() else None,
             "error": str(e),
             "user_id": request.headers.get('X-User-ID', 'default_user')
         })

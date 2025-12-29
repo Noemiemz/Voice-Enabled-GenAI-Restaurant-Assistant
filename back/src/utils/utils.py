@@ -7,6 +7,7 @@ from pathlib import Path
 @dataclass
 class Context:
     user_id: str
+    query_id: str = None
     verbose: bool = False
     # Add any other context fields (e.g., location, preferences)
 

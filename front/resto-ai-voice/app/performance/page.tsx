@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import api from '../services/api'
 import PerformanceCharts from './components/PerformanceCharts'
-import PerformanceTable from './components/PerformanceTable'
+import QueryGroupedView from './components/QueryGroupedView'
 
 interface PerformanceLog {
   timestamp: string;
@@ -19,6 +19,7 @@ export default function PerformancePage() {
   const [timeRange, setTimeRange] = useState('all')
   const [selectedOperations, setSelectedOperations] = useState<string[]>([])
   const [selectedAgents, setSelectedAgents] = useState<string[]>([])
+  const [queryIdFilter, setQueryIdFilter] = useState('')
 
   // Fetch logs on mount
   useEffect(() => {
@@ -70,6 +71,14 @@ export default function PerformancePage() {
     if (selectedAgents.length > 0) {
       const agentName = log.context?.agent_name
       if (!agentName || !selectedAgents.includes(agentName)) {
+        return false
+      }
+    }
+
+    // Filter by query_id
+    if (queryIdFilter.trim()) {
+      const logQueryId = log.context?.query_id || ''
+      if (!logQueryId.toLowerCase().includes(queryIdFilter.toLowerCase().trim())) {
         return false
       }
     }
@@ -134,6 +143,26 @@ export default function PerformancePage() {
                 </select>
               </div>
 
+              <div className="flex items-center gap-2">
+                <span className="text-orange-700 font-medium">Query ID:</span>
+                <input
+                  type="text"
+                  placeholder="Filter by Query ID..."
+                  value={queryIdFilter}
+                  onChange={(e) => setQueryIdFilter(e.target.value)}
+                  className="p-2 border border-orange-300 rounded-lg bg-white text-gray-800 hover:border-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent font-mono text-sm"
+                  style={{ width: '250px' }}
+                />
+                {queryIdFilter && (
+                  <button
+                    onClick={() => setQueryIdFilter('')}
+                    className="bg-orange-100 hover:bg-orange-200 text-orange-700 py-2 px-3 rounded-lg transition-colors text-sm"
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
+
               <div className="flex flex-wrap items-center gap-2">
                 <span className="text-orange-700 font-medium">Operations:</span>
                 <div className="flex flex-wrap gap-2">
@@ -195,7 +224,7 @@ export default function PerformancePage() {
                         style={{
                           backgroundColor: selectedAgents.includes(agent) ? bgColor : 'white',
                           borderColor: bgColor,
-                          color: selectedAgents.includes(agent) ? 'white' : '#374151'
+                          color: selectedAgents.includes(agent) ? 'white' : '#1f2937'
                         }}
                       >
                         <input
@@ -272,11 +301,11 @@ export default function PerformancePage() {
           </div>
         )}
 
-        {/* Data Table */}
+        {/* Query Grouped View */}
         {!loading && !error && filteredLogs.length > 0 && (
           <div className="bg-white rounded-lg shadow-lg p-6">
-            <h2 className="text-xl font-semibold text-orange-700 mb-4">Detailed Logs</h2>
-            <PerformanceTable logs={filteredLogs} />
+            <h2 className="text-xl font-semibold text-orange-700 mb-4">Queries Overview</h2>
+            <QueryGroupedView logs={filteredLogs} />
           </div>
         )}
 

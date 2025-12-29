@@ -29,8 +29,7 @@ export default function PerformanceCharts({ logs }: PerformanceChartsProps) {
     const agentLogs = logs.filter(log => 
       log.operation === 'agent_invocation' && log.context?.agent_name
     )
-    console.log('Agent Logs for Charts:', agentLogs)
-    console.log('all operations:', logs)
+
     // Clean up previous charts
     const cleanupCharts = () => {
       if (chartRef1.current) {
