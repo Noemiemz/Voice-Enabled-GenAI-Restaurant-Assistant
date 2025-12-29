@@ -85,3 +85,26 @@ def end_timing(start_info: tuple, context: Optional[Dict[str, Any]] = None):
     operation, start_time = start_info
     duration = time.time() - start_time
     log_timing(operation, duration, context)
+    return duration
+
+
+class TimingContext:
+    """Context manager for timing operations."""
+    
+    def __init__(self, operation: str, context: Optional[Dict[str, Any]] = None):
+        self.operation = operation
+        self.context = context or {}
+        self.start_time = None
+        self.duration = None
+    
+    def __enter__(self):
+        self.start_time = time.time()
+        return self
+    
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.duration = time.time() - self.start_time
+        # Add error info if exception occurred
+        if exc_type is not None:
+            self.context['error'] = str(exc_val)
+            self.context['error_type'] = exc_type.__name__
+        log_timing(self.operation, self.duration, self.context)

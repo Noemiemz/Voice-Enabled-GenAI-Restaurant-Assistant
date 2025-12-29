@@ -114,7 +114,8 @@ class LLMLoggingCallback(BaseCallbackHandler):
 class TimingCallbackHandler(BaseCallbackHandler):
     """Callback handler specifically for tracking LLM timing metrics."""
     
-    def __init__(self):
+    def __init__(self, agent_name: str = "unknown"):
+        self.agent_name = agent_name
         self.start_time = None
         self.current_operation = None
         current_dir = Path(__file__).parent
@@ -140,22 +141,45 @@ class TimingCallbackHandler(BaseCallbackHandler):
         if self.start_time:
             duration = time.time() - self.start_time
             
-            # Get token count if available
-            token_count = 0
+            # Get response text and token count
+            response_text = ""
+            word_count = 0
             if response.generations:
                 for gen_list in response.generations:
                     for gen in gen_list:
-                        token_count += len(gen.text.split())
+                        response_text = gen.text
+                        word_count += len(gen.text.split())
             
-            # Log timing information
-            self._log_timing("llm_api_call", duration, {
+            # Extract token usage from llm_output if available
+            token_usage = {}
+            if response.llm_output:
+                if 'token_usage' in response.llm_output:
+                    token_usage = response.llm_output['token_usage']
+                elif 'usage' in response.llm_output:
+                    token_usage = response.llm_output['usage']
+            
+            # Log timing information with detailed context
+            context = {
                 "model": response.llm_output.get("model", "unknown") if response.llm_output else "unknown",
-                "estimated_tokens": token_count,
-                "generation_length": len(response.generations[0][0].text) if response.generations else 0
-            })
+                "response_length_chars": len(response_text),
+                "response_length_words": word_count,
+                "response_preview": response_text[:100] + "..." if len(response_text) > 100 else response_text,
+            }
+            
+            # Add token usage details if available
+            if token_usage:
+                context["tokens_prompt"] = token_usage.get("prompt_tokens", token_usage.get("input_tokens", 0))
+                context["tokens_completion"] = token_usage.get("completion_tokens", token_usage.get("output_tokens", 0))
+                context["tokens_total"] = token_usage.get("total_tokens", 
+                    context.get("tokens_prompt", 0) + context.get("tokens_completion", 0))
+            
+            self._log_timing("llm_api_call", duration, context)
 
     def _log_timing(self, operation: str, duration: float, context: Dict[str, Any]):
         """Log timing information to performance log."""
+        # Add agent name to context
+        context["agent_name"] = self.agent_name
+        
         log_entry = {
             "timestamp": datetime.now().isoformat(),
             "operation": operation,

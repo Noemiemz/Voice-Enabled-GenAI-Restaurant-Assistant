@@ -680,6 +680,20 @@ export default function Home() {
           )}
         </main>
         
+        {/* Performance Dashboard Link (Admin) */}
+        <div className="fixed bottom-4 right-4">
+          <button
+            onClick={() => window.location.href = '/performance'}
+            className="bg-orange-500 hover:bg-orange-600 text-white py-2 px-4 rounded-lg transition-colors flex items-center gap-2 text-sm font-medium shadow-lg"
+            title="Performance Dashboard"
+          >
+            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+              <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span>Performance</span>
+          </button>
+        </div>
+
         {/* Footer */}
         <footer className="text-center text-sm text-orange-500 py-4">
           <p>© {new Date().getFullYear()} Les Pieds dans le Plat. Tous droits réservés.</p>

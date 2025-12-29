@@ -164,6 +164,27 @@ class RestaurantAPI {
       throw error
     }
   }
+
+  // Get performance logs
+  async getPerformanceLogs(): Promise<{
+    success: boolean;
+    logs?: Array<{
+      timestamp: string;
+      operation: string;
+      duration_seconds: number;
+      context?: Record<string, any>;
+    }>;
+    count?: number;
+    error?: string;
+  }> {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/performance/logs`)
+      return response.data
+    } catch (error) {
+      console.error('Error fetching performance logs:', error)
+      throw error
+    }
+  }
 }
 
 export default RestaurantAPI.getInstance()

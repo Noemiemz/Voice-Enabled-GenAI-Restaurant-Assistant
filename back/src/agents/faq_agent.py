@@ -12,7 +12,7 @@ def create_faq_agent():
     model = ChatMistralAI(
         mistral_api_key=os.getenv("MISTRAL_API_KEY"),
         model='mistral-small-latest',
-        callbacks=[LLMLoggingCallback(agent_name="faq"), TimingCallbackHandler()]
+        callbacks=[LLMLoggingCallback(agent_name="faq"), TimingCallbackHandler(agent_name="faq")]
     )
     
     system_prompt = get_prompt_content("faq_system.txt")

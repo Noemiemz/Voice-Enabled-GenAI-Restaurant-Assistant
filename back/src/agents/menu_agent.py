@@ -28,7 +28,7 @@ def create_menu_agent():
     model = ChatMistralAI(
         mistral_api_key=os.getenv("MISTRAL_API_KEY"), 
         model='mistral-small-latest',
-        callbacks=[LLMLoggingCallback(agent_name="menu"), TimingCallbackHandler()]
+        callbacks=[LLMLoggingCallback(agent_name="menu"), TimingCallbackHandler(agent_name="menu")]
     )
     
     system_prompt = get_prompt_content("menu_system.txt")

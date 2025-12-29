@@ -67,7 +67,8 @@ def home():
             "/menu",
             "/dishes",
             "/reservations",
-            "/info"
+            "/info",
+            "/performance/logs"
         ]
     })
 
@@ -112,8 +113,8 @@ def handle_query():
         # Create config for thread management
         config = {"configurable": {"thread_id": user_id}}
         
-        # Start timing agent processing
-        agent_start = time.time()
+        # Start timing orchestrator processing
+        orchestrator_start = time.time()
         
         # Invoke the orchestrator
         result = orchestrator.invoke(
@@ -122,16 +123,25 @@ def handle_query():
             context=context,
         )
         
-        # Log agent processing time
-        agent_duration = time.time() - agent_start
-        log_timing("agent_processing", agent_duration, {
-            "user_id": user_id,
-            "agent": "orchestrator",
-            "query_length": len(user_query)
-        })
-        
         # Extract the response
         response = result["messages"][-1].content if result.get("messages") else "No response"
+        
+        # Log orchestrator processing time
+        orchestrator_duration = time.time() - orchestrator_start
+        log_timing("agent_invocation", orchestrator_duration, {
+            "user_id": user_id,
+            "agent_name": "orchestrator",
+            "query_length": len(user_query),
+            "query_preview": user_query[:50] + "..." if len(user_query) > 50 else user_query,
+            "query_full": user_query,
+            "invoked_by": "api_endpoint",
+            "endpoint": "/query",
+            "messages_count": len(result.get("messages", [])),
+            "response_length": len(response),
+            "response_preview": response[:100] + "..." if len(response) > 100 else response,
+            "response_full": response
+        })
+        
         
         # Build history (last 5 messages)
         history = []
@@ -149,7 +159,11 @@ def handle_query():
         log_timing("total_query_processing", total_duration, {
             "user_id": user_id,
             "query_length": len(user_query),
-            "response_length": len(response)
+            "response_length": len(response),
+            "orchestrator_time": round(orchestrator_duration, 6),
+            "overhead_time": round(total_duration - orchestrator_duration, 6),
+            "success": True,
+            "endpoint": "/query"
         })
 
         return jsonify({
@@ -159,7 +173,7 @@ def handle_query():
             "timestamp": datetime.now().isoformat(),
             "performance": {
                 "total_processing_time": round(total_duration, 6),
-                "agent_processing_time": round(agent_duration, 6)
+                "orchestrator_time": round(orchestrator_duration, 6)
             }
         })
 
@@ -362,6 +376,60 @@ def reset_conversation():
             "error": str(e)
         }), 500
 
+@app.route('/performance/logs', methods=['GET'])
+def get_performance_logs():
+    """Get performance timing logs"""
+    try:
+        from pathlib import Path
+        import json
+        
+        # Get log directory
+        log_dir = Path(__file__).parent.parent / "data" / "logs"
+        
+        # Check if directory exists
+        if not log_dir.exists():
+            return jsonify({
+                "success": True,
+                "logs": [],
+                "count": 0,
+                "message": "No performance logs found"
+            })
+        
+        # Find all performance log files
+        log_files = sorted(log_dir.glob("performance_log_*.jsonl"), reverse=True)
+        
+        logs = []
+        for log_file in log_files:
+            try:
+                with open(log_file, "r", encoding="utf-8") as f:
+                    for line in f:
+                        try:
+                            line = line.strip()
+                            if line:  # Skip empty lines
+                                log_entry = json.loads(line)
+                                logs.append(log_entry)
+                        except json.JSONDecodeError as e:
+                            print(f"[WARNING] Failed to parse log line: {e}")
+                            continue
+            except (IOError, OSError) as e:
+                print(f"[WARNING] Failed to read log file {log_file}: {e}")
+                continue
+        
+        return jsonify({
+            "success": True,
+            "logs": logs,
+            "count": len(logs)
+        })
+        
+    except Exception as e:
+        print(f"[ERROR] Failed to fetch performance logs: {e}")
+        return jsonify({
+            "success": False,
+            "error": str(e),
+            "logs": [],
+            "count": 0
+        }), 500
+
 # Error handlers
 @app.errorhandler(404)
 def not_found(error):
@@ -400,6 +468,7 @@ if __name__ == '__main__':
     print("   GET    /info          - Get restaurant info")
     print("   GET    /health        - Health check")
     print("   POST   /reset         - Reset conversation")
+    print("   GET    /performance/logs - Get performance logs")
 
     # Register shutdown handler
     import atexit

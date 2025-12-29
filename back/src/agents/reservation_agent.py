@@ -28,7 +28,7 @@ def create_reservation_agent():
     model = ChatMistralAI(
         mistral_api_key=os.getenv("MISTRAL_API_KEY"), 
         model='mistral-small-latest',
-        callbacks=[LLMLoggingCallback(agent_name="reservation"), TimingCallbackHandler()]
+        callbacks=[LLMLoggingCallback(agent_name="reservation"), TimingCallbackHandler(agent_name="reservation")]
     )
     
     system_prompt = get_prompt_content("reservation_system.txt")
