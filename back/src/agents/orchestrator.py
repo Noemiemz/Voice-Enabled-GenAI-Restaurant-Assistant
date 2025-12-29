@@ -43,7 +43,7 @@ def create_orchestrator_agent(agent_manager):
                 config=_thread_config_from_context(runtime),
                 context=runtime.context,
             )
-            response_str = str(resp)
+            response_str = str(resp["messages"][-1].content)
             timer.context["response_length"] = len(response_str)
             timer.context["response_preview"] = response_str[:100] + "..." if len(response_str) > 100 else response_str
             timer.context["response_full"] = response_str
@@ -98,7 +98,7 @@ def create_orchestrator_agent(agent_manager):
                 config=_thread_config_from_context(runtime),
                 context=runtime.context,
             )
-            response_str = str(resp)
+            response_str = str(resp["messages"][-1].content)
             timer.context["response_length"] = len(response_str)
             timer.context["response_preview"] = response_str[:100] + "..." if len(response_str) > 100 else response_str
             timer.context["response_full"] = response_str
