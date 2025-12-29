@@ -5,6 +5,7 @@ This API connects the frontend with the new agent system and database
 
 import os
 import sys
+import time
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from datetime import datetime
@@ -18,7 +19,9 @@ from models.llm import MistralWrapper
 from models.mongodb import MongoDBManager
 from tools.mongodb_tools import MongoDBTools
 from agents.orchestrator import create_orchestrator_agent
-from utils import Context
+from agents.agent_manager import AgentManager
+from utils.utils import Context
+from utils.timing import log_timing, start_timing, end_timing
 
 
 # Initialize Flask app
@@ -27,6 +30,7 @@ CORS(app, resources={r"/*": {"origins": "*"}})
 
 # Initialize components
 db_manager = MongoDBManager()
+agent_manager = AgentManager()
 
 # Try to initialize LLM (will use mock if API key not available)
 try:
@@ -38,8 +42,9 @@ try:
         print("[WARNING] No Mistral API key found, using mock LLM")
         llm = None
 
-    # Initialize agents
-    orchestrator = create_orchestrator_agent()
+    # Initialize agents using the agent manager
+    agent_manager.initialize()
+    orchestrator = create_orchestrator_agent(agent_manager)
     database = MongoDBTools()
     print("[SUCCESS] Agents initialized")
 
@@ -72,6 +77,9 @@ def handle_query():
     Handle user queries (both text and audio)
     Expected JSON: {"query": "user message"}
     """
+    # Start timing the entire query processing
+    query_start = time.time()
+    
     try:
         data = request.get_json()
 
@@ -104,12 +112,23 @@ def handle_query():
         # Create config for thread management
         config = {"configurable": {"thread_id": user_id}}
         
+        # Start timing agent processing
+        agent_start = time.time()
+        
         # Invoke the orchestrator
         result = orchestrator.invoke(
             {"messages": [{"role": "user", "content": user_query}]},
             config=config,
             context=context,
         )
+        
+        # Log agent processing time
+        agent_duration = time.time() - agent_start
+        log_timing("agent_processing", agent_duration, {
+            "user_id": user_id,
+            "agent": "orchestrator",
+            "query_length": len(user_query)
+        })
         
         # Extract the response
         response = result["messages"][-1].content if result.get("messages") else "No response"
@@ -123,18 +142,43 @@ def handle_query():
                     "content": getattr(msg, 'content', str(msg))
                 })
 
+        # Calculate total query processing time
+        total_duration = time.time() - query_start
+        
+        # Log total processing time
+        log_timing("total_query_processing", total_duration, {
+            "user_id": user_id,
+            "query_length": len(user_query),
+            "response_length": len(response)
+        })
+
         return jsonify({
             "response": response,
             "agent_processing": True,
             "history": history,
-            "timestamp": datetime.now().isoformat()
+            "timestamp": datetime.now().isoformat(),
+            "performance": {
+                "total_processing_time": round(total_duration, 6),
+                "agent_processing_time": round(agent_duration, 6)
+            }
         })
 
     except Exception as e:
         print(f"[ERROR] Processing query failed: {e}")
+        
+        # Log error processing time
+        error_duration = time.time() - query_start
+        log_timing("query_error_processing", error_duration, {
+            "error": str(e),
+            "user_id": request.headers.get('X-User-ID', 'default_user')
+        })
+        
         return jsonify({
             "error": "Failed to process query",
-            "details": str(e)
+            "details": str(e),
+            "performance": {
+                "error_processing_time": round(error_duration, 6)
+            }
         }), 500
 
 @app.route('/menu', methods=['GET'])
@@ -333,6 +377,12 @@ def internal_error(error):
         "details": str(error)
     }), 500
 
+def shutdown_handler():
+    """Clean up resources when the application shuts down."""
+    if 'agent_manager' in globals() and agent_manager.is_initialized:
+        agent_manager.cleanup()
+        print("[SHUTDOWN] Agent manager cleaned up")
+
 if __name__ == '__main__':
     # Get port from environment or use default
     port = int(os.environ.get('PORT', 5000))
@@ -350,5 +400,9 @@ if __name__ == '__main__':
     print("   GET    /info          - Get restaurant info")
     print("   GET    /health        - Health check")
     print("   POST   /reset         - Reset conversation")
+
+    # Register shutdown handler
+    import atexit
+    atexit.register(shutdown_handler)
 
     app.run(host='0.0.0.0', port=port, debug=True)
