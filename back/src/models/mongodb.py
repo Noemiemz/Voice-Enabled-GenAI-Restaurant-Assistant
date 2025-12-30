@@ -135,9 +135,9 @@ class MongoDBManager:
             print(f"Error creating reservation: {e}")
             return None
 
-    def update_reservation(self, reservation_id: str, update_data: Dict[str, Any]) -> bool:
+    def update_reservation(self, reservation_id: str, update_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         if self.reservations is None:
-            return False
+            return None
         try:
             # Never overwrite createdAt
             update_data = {k: v for k, v in update_data.items() if k != "createdAt"}
@@ -147,14 +147,14 @@ class MongoDBManager:
                 {"_id": ObjectId(reservation_id)},
                 {"$set": update_data}
             )
-            return result.modified_count > 0
+            return self.get_reservation(reservation_id)
         except Exception as e:
             print(f"Error updating reservation: {e}")
-            return False
+            return None
 
-    def cancel_reservation(self, reservation_id: str) -> bool:
+    def cancel_reservation(self, reservation_id: str) -> Optional[Dict[str, Any]]:
         if self.reservations is None:
-            return False
+            return None
         try:
             result = self.reservations.update_one(
                 {"_id": ObjectId(reservation_id)},
@@ -163,10 +163,10 @@ class MongoDBManager:
                     "updatedAt": datetime.now().isoformat()
                 }}
             )
-            return result.modified_count > 0
+            return self.get_reservation(reservation_id)
         except Exception as e:
             print(f"Error cancelling reservation: {e}")
-            return False
+            return None
         
     def get_reservations(self, filters: Dict[str, Any] = None) -> List[Dict[str, Any]]:
         if self.reservations is None:
@@ -283,6 +283,37 @@ class MongoDBManager:
             print(f"Error creating order: {e}")
             return None
     
+    def update_order(self, order_id: str, update_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        if self.orders is None:
+            return None
+        try:
+            result = self.orders.update_one(
+                {"_id": ObjectId(order_id)},
+                {"$set": update_data}
+            )
+            order = self.orders.find_one({"_id": ObjectId(order_id)})
+            if order:
+                order["_id"] = str(order["_id"])
+            return order
+        except Exception as e:
+            print(f"Error updating order: {e}")
+            return None
+        
+    def cancel_order(self, order_id: str) -> Optional[Dict[str, Any]]:
+        if self.orders is None:
+            return None
+        try:
+            result = self.orders.update_one(
+                {"_id": ObjectId(order_id)},
+                {"$set": {"order_status": "cancelled"}}
+            )
+            order = self.orders.find_one({"_id": ObjectId(order_id)})
+            if order:
+                order["_id"] = str(order["_id"])
+            return order
+        except Exception as e:
+            print(f"Error cancelling order: {e}")
+            return None
 
     # ===== CRUD Methods for Menu =====
     def get_menu(self) -> Optional[Dict[str, Any]]:

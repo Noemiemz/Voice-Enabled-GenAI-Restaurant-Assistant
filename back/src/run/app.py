@@ -19,8 +19,8 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from models.llm import MistralWrapper
 from models.mongodb import MongoDBManager
 from tools.mongodb_tools import MongoDBTools
-from agents.orchestrator import create_orchestrator_agent
-from agents.agent_manager import AgentManager
+from old_agents.orchestrator import create_orchestrator_agent
+from old_agents.agent_manager import AgentManager
 from utils.utils import Context
 from utils.timing import log_timing, start_timing, end_timing
 from utils.session_manager import SessionManager
