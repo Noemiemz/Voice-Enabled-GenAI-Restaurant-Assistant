@@ -34,12 +34,15 @@ def app():
         # Generate assistant response (placeholder - integrate with your backend)
         with st.chat_message("assistant"):
             with st.spinner("Thinking..."):
-                response = st.write_stream(st.session_state.supervisor_agent.stream(
+                for step in st.write_stream(st.session_state.supervisor_agent.stream(
                     {"messages": st.session_state.messages}
-                ))
+                )):
+                    for update in step.values():
+                        for message in update.get("messages", []):
+                            message.pretty_print()
         
         # Add assistant response to chat history
-        st.session_state.messages.append({"role": "assistant", "content": response[-1]['model']['messages'][0].content})
+        st.session_state.messages.append({"role": "assistant", "content": message.text})
         
         # Rerun to update the chat display
         st.rerun()
