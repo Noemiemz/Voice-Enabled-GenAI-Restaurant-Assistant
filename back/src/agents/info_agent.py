@@ -18,29 +18,33 @@ def create_info_agent():
     db = MongoDBManager()
     
     # --- Create tools ---
-    @tool
+    @tool("get_all_dishes")
     def get_all_dishes() -> List[Dict[str, Any]]:
-        """Get all dishes"""
+        """Get all dishes from the menu."""
         return db.get_all_dishes()
     
-    @tool
+    @tool("get_dish_by_id")
     def get_dish_by_id(dish_id: str) -> Optional[Dict[str, Any]]:
-        """Get a specific dish by ID"""
+        """Get a specific dish by ID.
+        
+        Args:
+            dish_id: The unique identifier of the dish
+        """
         return db.get_dish(dish_id)
     
-    @tool
+    @tool("get_dishes_by_category")
     def get_dishes_by_category() -> Dict[str, List[Dict[str, Any]]]:
-        """Get all dishes grouped by category"""
+        """Get all dishes grouped by category."""
         return db.get_dishes_by_category()
 
-    @tool
+    @tool("get_offers")
     def get_offers() -> Optional[Dict[str, Any]]:
-        """Get all current offers"""
+        """Get all current offers and promotions."""
         return db.get_menu()
     
-    @tool
+    @tool("get_restaurant_info")
     def get_restaurant_info() -> Dict[str, Any]:
-        """Get restaurant information"""
+        """Get general restaurant information including location, hours, and contact details."""
         return db.get_restaurant_info()
 
 

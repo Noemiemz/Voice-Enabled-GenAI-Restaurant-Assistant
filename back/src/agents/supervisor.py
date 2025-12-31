@@ -21,47 +21,50 @@ def create_supervisor_agent():
     reservation_agent = create_reservation_agent()
     
     # --- Create tools ---
-    @tool
+    @tool("info_event")
     def info_event(request: str) -> str:
         """
         Provide information about the restaurant, dishes, menu and offers.
 
         Use this when the user needs general information about the restaurant or information about dishes, menu, and offers.
-
-        Input: Natural language request from the user (e.g., 'Where is the restaurant located?', 'Which dishes are vegan?').
+        
+        Args:
+            request: Natural language request from the user (e.g., 'Where is the restaurant located?', 'Which dishes are vegan?')
         """
         response = info_agent.invoke({
             "messages": [{"role": "user", "content": request}]
         })
-        return response["message"][-1].text
+        return response["messages"][-1].text
 
-    @tool
+    @tool("order_event")
     def order_event(request: str) -> str:
         """
         Handle food ordering requests.
 
         Use this when the user wants to place an order, modify an order, or inquire about their order status.
-
-        Input: Natural language request from the user (e.g., 'I want to order a pizza', 'Can I change my order?').
+        
+        Args:
+            request: Natural language request from the user (e.g., 'I want to order a pizza', 'Can I change my order?')
         """
         response = order_agent.invoke({
             "messages": [{"role": "user", "content": request}]
         })
-        return response["message"][-1].text
+        return response["messages"][-1].text
     
-    @tool
+    @tool("reservation_event")
     def reservation_event(request: str) -> str:
         """
         Manage reservation-related requests.
 
         Use this when the user wants to make, modify, or cancel a reservation, or inquire about reservation details.
-
-        Input: Natural language request from the user (e.g., 'I want to book a table for two today', 'Can I change my reservation time?').
+        
+        Args:
+            request: Natural language request from the user (e.g., 'I want to book a table for two today', 'Can I change my reservation time?')
         """
         response = reservation_agent.invoke({
             "messages": [{"role": "user", "content": request}]
         })
-        return response["message"][-1].text
+        return response["messages"][-1].text
 
     # --- Create agent ---
     model = ChatMistralAI(

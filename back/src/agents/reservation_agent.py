@@ -18,34 +18,55 @@ def create_reservation_agent():
     db = MongoDBManager()
     
     # --- Create tools ---
-    @tool
+    @tool("get_reservations")
     def get_reservations(filters: Optional[Dict] = None) -> List[Dict]:
-        """Get reservations with optional filters"""
+        """Get reservations with optional filters.
+        
+        Args:
+            filters: Optional dictionary of filters to apply
+        """
         return db.get_reservations(filters)
     
-    @tool
+    @tool("get_reservation_by_id")
     def get_reservation_by_id(reservation_id: str) -> Dict:
-        """Get a specific reservation by ID"""
+        """Get a specific reservation by ID.
+        
+        Args:
+            reservation_id: The unique identifier of the reservation
+        """
         return db.get_reservation(reservation_id)
 
-    @tool
+    @tool("get_tables")
     def get_tables() -> List[Dict]:
-        """Get all tables"""
+        """Get all available tables in the restaurant."""
         return db.get_tables()
 
-    @tool
+    @tool("create_reservation")
     def create_reservation(reservation_data: Dict) -> Dict:
-        """Create a new reservation"""
+        """Create a new reservation.
+        
+        Args:
+            reservation_data: Dictionary containing reservation details
+        """
         return db.create_reservation(reservation_data)
     
-    @tool
+    @tool("update_reservation")
     def update_reservation(reservation_id: str, update_data: Dict) -> Dict:
-        """Update an existing reservation"""
+        """Update an existing reservation.
+        
+        Args:
+            reservation_id: The unique identifier of the reservation
+            update_data: Dictionary containing fields to update
+        """
         return db.update_reservation(reservation_id, update_data)
 
-    @tool
+    @tool("cancel_reservation")
     def cancel_reservation(reservation_id: str) -> Dict:
-        """Cancel a reservation"""
+        """Cancel a reservation.
+        
+        Args:
+            reservation_id: The unique identifier of the reservation to cancel
+        """
         return db.cancel_reservation(reservation_id)
 
     # --- Create agent ---

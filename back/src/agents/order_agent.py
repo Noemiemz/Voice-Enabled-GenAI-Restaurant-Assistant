@@ -18,24 +18,41 @@ def create_order_agent():
     db = MongoDBManager()
     
     # --- Create tools ---
-    @tool
+    @tool("get_orders")
     def get_orders(filters: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
-        """Get orders with optional filters"""
+        """Get orders with optional filters.
+        
+        Args:
+            filters: Optional dictionary of filters to apply
+        """
         return db.get_orders(filters)
     
-    @tool
+    @tool("create_order")
     def create_order(order_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        """Create a new order"""
+        """Create a new order.
+        
+        Args:
+            order_data: Dictionary containing order details
+        """
         return db.create_order(order_data)
     
-    @tool
+    @tool("update_order")
     def update_order(order_id: str, update_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        """Update an existing order"""
+        """Update an existing order.
+        
+        Args:
+            order_id: The unique identifier of the order
+            update_data: Dictionary containing fields to update
+        """
         return db.update_order(order_id, update_data)
     
-    @tool
+    @tool("cancel_order")
     def cancel_order(order_id: str) -> Optional[Dict[str, Any]]:
-        """Cancel an order"""
+        """Cancel an order.
+        
+        Args:
+            order_id: The unique identifier of the order to cancel
+        """
         return db.cancel_order(order_id)
 
     # --- Create agent ---
