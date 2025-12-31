@@ -1,7 +1,7 @@
 from langchain.agents import create_agent
 from langchain.tools import tool
 from langchain_mistralai import ChatMistralAI
-from typing import Optional, List, Dict
+from typing import Optional, List, Dict, Any
 
 from models.mongodb import MongoDBManager
 from pathseeker import PROMPTS_DIR
@@ -19,7 +19,7 @@ def create_reservation_agent():
     
     # --- Create tools ---
     @tool("get_reservations")
-    def get_reservations(filters: Optional[Dict] = None) -> List[Dict]:
+    def get_reservations(filters: Optional[Dict] = None) -> List[Dict[str, Any]]:
         """Get reservations with optional filters.
         
         Args:
@@ -28,7 +28,7 @@ def create_reservation_agent():
         return db.get_reservations(filters)
     
     @tool("get_reservation_by_id")
-    def get_reservation_by_id(reservation_id: str) -> Dict:
+    def get_reservation_by_id(reservation_id: str) -> Optional[Dict[str, Any]]:
         """Get a specific reservation by ID.
         
         Args:
@@ -37,12 +37,12 @@ def create_reservation_agent():
         return db.get_reservation(reservation_id)
 
     @tool("get_tables")
-    def get_tables() -> List[Dict]:
+    def get_tables() -> List[Dict[str, Any]]:
         """Get all available tables in the restaurant."""
         return db.get_tables()
 
     @tool("create_reservation")
-    def create_reservation(reservation_data: Dict) -> Dict:
+    def create_reservation(reservation_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """Create a new reservation.
         
         Args:
@@ -51,7 +51,7 @@ def create_reservation_agent():
         return db.create_reservation(reservation_data)
     
     @tool("update_reservation")
-    def update_reservation(reservation_id: str, update_data: Dict) -> Dict:
+    def update_reservation(reservation_id: str, update_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """Update an existing reservation.
         
         Args:
@@ -61,7 +61,7 @@ def create_reservation_agent():
         return db.update_reservation(reservation_id, update_data)
 
     @tool("cancel_reservation")
-    def cancel_reservation(reservation_id: str) -> Dict:
+    def cancel_reservation(reservation_id: str) -> Optional[Dict[str, Any]]:
         """Cancel a reservation.
         
         Args:

@@ -1,5 +1,5 @@
 import streamlit as st
-from agents import create_supervisor_agent
+from models.agents import create_supervisor_agent
 
 def app():
     st.set_page_config(page_title="Restaurant AI Assistant", layout="wide")

@@ -1,9 +1,8 @@
 from langchain.agents import create_agent
 from langchain.tools import tool
 from langchain_mistralai import ChatMistralAI
-from typing import Optional, List, Dict, Any
 
-from agents import create_info_agent, create_order_agent, create_reservation_agent
+from models.agents import create_info_agent, create_order_agent, create_reservation_agent
 from pathseeker import PROMPTS_DIR
 
 import os
