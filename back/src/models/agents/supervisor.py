@@ -104,7 +104,7 @@ def create_supervisor_agent():
     # --- Create agent ---
     model = ChatMistralAI(
         mistral_api_key=MISTRAL_API_KEY,
-        model='mistral-small-latest',
+        model='mistral-medium-latest',
         max_retries=2
     )
 

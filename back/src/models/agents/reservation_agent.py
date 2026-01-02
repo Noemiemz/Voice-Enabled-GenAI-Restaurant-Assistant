@@ -2,6 +2,7 @@ from langchain.agents import create_agent
 from langchain.tools import tool
 from langchain_mistralai import ChatMistralAI
 from typing import Optional, List, Dict, Any
+from datetime import datetime
 
 from data.mongodb import MongoDBManager
 from data.table_schemas import TableSchema, ReservationSchema
@@ -63,7 +64,7 @@ def create_reservation_agent(db: MongoDBManager):
     # --- Create agent ---
     model = ChatMistralAI(
         mistral_api_key=MISTRAL_API_KEY,
-        model='mistral-small-latest',
+        model='mistral-medium-latest',
         max_retries=2
     )
 
@@ -71,6 +72,10 @@ def create_reservation_agent(db: MongoDBManager):
     with open(prompt_path, "r") as f:
         system_prompt = f.read()
         f.close()
+    
+    # Add current date and time to the prompt
+    current_datetime = datetime.now().strftime("%A, %B %d, %Y at %H:%M")
+    system_prompt = f"CURRENT DATE AND TIME: {current_datetime}\n\n{system_prompt}"
 
     reservation_agent = create_agent(
         model=model,
