@@ -134,18 +134,14 @@ class MongoDBManager:
             print(f"Error updating reservation: {e}")
             return None
 
-    def cancel_reservation(self, reservation_id: str) -> Optional[Dict[str, Any]]:
+    def cancel_reservation(self, reservation_id: str) -> Optional[bool]:
         if self.reservations is None:
             return None
         try:
-            result = self.reservations.update_one(
-                {"_id": ObjectId(reservation_id)},
-                {"$set": {
-                    "status": "cancelled",
-                    "updatedAt": datetime.now().isoformat()
-                }}
+            result = self.reservations.delete_one(
+                {"_id": ObjectId(reservation_id)}
             )
-            return self.get_reservation(reservation_id)
+            return result.deleted_count > 0
         except Exception as e:
             print(f"Error cancelling reservation: {e}")
             return None
@@ -235,7 +231,6 @@ class MongoDBManager:
         if self.orders is None:
             return None
         try:
-            order_data["order_status"] = "pending"
             result = self.orders.insert_one(order_data)
             order = self.orders.find_one({"_id": result.inserted_id})
             if order:
@@ -261,18 +256,14 @@ class MongoDBManager:
             print(f"Error updating order: {e}")
             return None
         
-    def cancel_order(self, order_id: str) -> Optional[Dict[str, Any]]:
+    def cancel_order(self, order_id: str) -> Optional[bool]:
         if self.orders is None:
             return None
         try:
-            result = self.orders.update_one(
-                {"_id": ObjectId(order_id)},
-                {"$set": {"order_status": "cancelled"}}
+            result = self.orders.delete_one(
+                {"_id": ObjectId(order_id)}
             )
-            order = self.orders.find_one({"_id": ObjectId(order_id)})
-            if order:
-                order["_id"] = str(order["_id"])
-            return order
+            return result.deleted_count > 0
         except Exception as e:
             print(f"Error cancelling order: {e}")
             return None
