@@ -6,7 +6,7 @@ def app():
     
     # Initialize chat history in session state
     if "messages" not in st.session_state:
-        st.session_state.messages = []
+        st.session_state.messages = [{"role": "assistant", "content": "Hello! I am Roger, your Restaurant AI Assistant for Les Pieds dans le Plat. How can I assist you?"}]
 
     if "supervisor_agent" not in st.session_state:
         st.session_state.supervisor_agent = create_supervisor_agent()
