@@ -63,7 +63,8 @@ def create_reservation_agent(db: MongoDBManager):
     # --- Create agent ---
     model = ChatMistralAI(
         mistral_api_key=MISTRAL_API_KEY,
-        model='mistral-small-latest'
+        model='mistral-small-latest',
+        max_retries=2
     )
 
     prompt_path = PROMPTS_DIR / "reservation_agent_prompt.txt"

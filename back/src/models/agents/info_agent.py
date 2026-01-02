@@ -27,9 +27,9 @@ def create_info_agent(db: MongoDBManager):
         """Get all dishes grouped by category."""
         return db.get_dishes_by_category()
 
-    @tool("get_offers")
-    def get_offers() -> Optional[Dict[str, Any]]:
-        """Get all current offers and promotions."""
+    @tool("get_formulas")
+    def get_formulas() -> Optional[Dict[str, Any]]:
+        """Get special formulas."""
         return db.get_menu()
     
     @tool("get_restaurant_info")
@@ -55,7 +55,7 @@ def create_info_agent(db: MongoDBManager):
         tools=[
             get_all_dishes,
             get_dishes_by_category,
-            get_offers,
+            get_formulas,
             get_restaurant_info,
         ]
     )

@@ -18,6 +18,16 @@ def create_order_agent(db: MongoDBManager):
     """Create and return the order agent."""
     
     # --- Create tools ---
+    @tool("get_all_dishes")
+    def get_all_dishes() -> List[Dict[str, Any]]:
+        """Get all dishes from the menu."""
+        return db.get_all_dishes()
+
+    @tool("get_formulas")
+    def get_formulas() -> Optional[Dict[str, Any]]:
+        """Get special formulas."""
+        return db.get_menu()
+
     @tool("get_orders")
     def get_orders(filters: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
         """Get orders with optional filters.
@@ -58,7 +68,8 @@ def create_order_agent(db: MongoDBManager):
     # --- Create agent ---
     model = ChatMistralAI(
         mistral_api_key=MISTRAL_API_KEY,
-        model='mistral-small-latest'
+        model='mistral-small-latest',
+        max_retries=2
     )
 
     prompt_path = PROMPTS_DIR / "order_agent_prompt.txt"
@@ -70,6 +81,8 @@ def create_order_agent(db: MongoDBManager):
         model=model,
         system_prompt=system_prompt,
         tools=[
+            get_all_dishes,
+            get_formulas,
             get_orders,
             create_order,
             update_order,

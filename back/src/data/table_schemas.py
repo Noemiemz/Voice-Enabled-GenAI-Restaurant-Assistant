@@ -15,15 +15,15 @@ class DishSchema(BaseModel):
 
 class OfferSchema(BaseModel):
     name: str = Field(description="Name of the offer")
-    starters: List[DishSchema] = Field(description="List of starter dishes in the offer")
-    main_courses: List[DishSchema] = Field(description="List of main course dishes in the offer")
-    desserts: List[DishSchema] = Field(description="List of dessert dishes in the offer")
+    starters_ids: List[str] = Field(description="List of dish IDs of starters in the offer")
+    main_courses_ids: List[str] = Field(description="List of dish IDs of main courses in the offer")
+    desserts_ids: List[str] = Field(description="List of dish IDs of desserts in the offer")
     price: float = Field(description="Total price of the offer in EUR")
 
 class OrderSchema(BaseModel):
     customer_name: str = Field(description="Name of the customer placing the order")
     customer_phone: str = Field(description="Phone number of the customer")
-    items: List[DishSchema] = Field(description="List of dishes ordered")
+    dishes_ids: List[str] = Field(description="List of dish IDs included in the order")
     order_type: Literal["takeaway", "delivery"] = Field(description="Type of the order: takeaway or delivery")
     status: Literal["pending", "preparing", "ready", "on the way", "delivered", "cancelled"] = Field(description="Current status of the order")
     delivery_address: Optional[str] = Field(default=None, description="Delivery address if the order type is delivery")
