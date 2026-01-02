@@ -3,7 +3,8 @@ from langchain.tools import tool
 from langchain_mistralai import ChatMistralAI
 from typing import Optional, List, Dict, Any
 
-from models.mongodb import MongoDBManager
+from data.mongodb import MongoDBManager
+from data.table_schemas import OrderSchema
 from pathseeker import PROMPTS_DIR
 
 import os
@@ -13,9 +14,8 @@ load_dotenv()
 
 MISTRAL_API_KEY = os.environ.get("MISTRAL_API_KEY")
 
-def create_order_agent():
+def create_order_agent(db: MongoDBManager):
     """Create and return the order agent."""
-    db = MongoDBManager()
     
     # --- Create tools ---
     @tool("get_orders")
@@ -28,23 +28,23 @@ def create_order_agent():
         return db.get_orders(filters)
     
     @tool("create_order")
-    def create_order(order_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    def create_order(order_data: OrderSchema) -> Optional[Dict[str, Any]]:
         """Create a new order.
         
         Args:
             order_data: Dictionary containing order details
         """
-        return db.create_order(order_data)
+        return db.create_order(order_data.model_dump())
     
     @tool("update_order")
-    def update_order(order_id: str, update_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    def update_order(order_id: str, update_data: OrderSchema) -> Optional[Dict[str, Any]]:
         """Update an existing order.
         
         Args:
             order_id: The unique identifier of the order
             update_data: Dictionary containing fields to update
         """
-        return db.update_order(order_id, update_data)
+        return db.update_order(order_id, update_data.model_dump())
     
     @tool("cancel_order")
     def cancel_order(order_id: str) -> Optional[Dict[str, Any]]:

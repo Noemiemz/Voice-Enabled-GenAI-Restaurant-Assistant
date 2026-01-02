@@ -3,7 +3,7 @@ from langchain.tools import tool
 from langchain_mistralai import ChatMistralAI
 from typing import Optional, List, Dict, Any
 
-from models.mongodb import MongoDBManager
+from data.mongodb import MongoDBManager
 from pathseeker import PROMPTS_DIR
 
 import os
@@ -13,24 +13,14 @@ load_dotenv()
 
 MISTRAL_API_KEY = os.environ.get("MISTRAL_API_KEY")
 
-def create_info_agent():
+def create_info_agent(db: MongoDBManager):
     """Create and return the info agent."""
-    db = MongoDBManager()
     
     # --- Create tools ---
     @tool("get_all_dishes")
     def get_all_dishes() -> List[Dict[str, Any]]:
         """Get all dishes from the menu."""
         return db.get_all_dishes()
-    
-    @tool("get_dish_by_id")
-    def get_dish_by_id(dish_id: str) -> Optional[Dict[str, Any]]:
-        """Get a specific dish by ID.
-        
-        Args:
-            dish_id: The unique identifier of the dish
-        """
-        return db.get_dish(dish_id)
     
     @tool("get_dishes_by_category")
     def get_dishes_by_category() -> Dict[str, List[Dict[str, Any]]]:
@@ -64,7 +54,6 @@ def create_info_agent():
         system_prompt=system_prompt,
         tools=[
             get_all_dishes,
-            get_dish_by_id,
             get_dishes_by_category,
             get_offers,
             get_restaurant_info,
