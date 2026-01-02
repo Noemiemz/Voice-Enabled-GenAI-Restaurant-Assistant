@@ -2,7 +2,6 @@ import os
 from pymongo import MongoClient
 from pymongo.errors import ConnectionFailure, OperationFailure
 from typing import Optional, Dict, Any, List
-from datetime import datetime
 from bson.objectid import ObjectId
 from dotenv import load_dotenv
 
@@ -106,11 +105,6 @@ class MongoDBManager:
         if self.reservations is None:
             return None
         try:
-            now = datetime.now().isoformat()
-            reservation_data["createdAt"] = now
-            reservation_data["updatedAt"] = now
-            reservation_data["status"] = "confirmed"
-
             result = self.reservations.insert_one(reservation_data)
             return self.get_reservation(str(result.inserted_id))
         except Exception as e:
@@ -121,10 +115,6 @@ class MongoDBManager:
         if self.reservations is None:
             return None
         try:
-            # Never overwrite createdAt
-            update_data = {k: v for k, v in update_data.items() if k != "createdAt"}
-            update_data["updatedAt"] = datetime.now().isoformat()
-
             result = self.reservations.update_one(
                 {"_id": ObjectId(reservation_id)},
                 {"$set": update_data}
@@ -151,7 +141,7 @@ class MongoDBManager:
             return []
         try:
             query = filters or {}
-            reservations = list(self.reservations.find(query).sort("createdAt", -1))
+            reservations = list(self.reservations.find(query))
             for r in reservations:
                 r["_id"] = str(r["_id"])
             return reservations
@@ -285,7 +275,6 @@ class MongoDBManager:
         if self.menu is None:
             return False
         try:
-            menu_data["lastUpdated"] = datetime.now().isoformat()
             result = self.menu.replace_one({}, menu_data)
             return result.modified_count > 0
         except Exception as e:
