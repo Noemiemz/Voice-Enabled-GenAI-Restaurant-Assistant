@@ -1,7 +1,7 @@
 import axios from 'axios'
 
 // Base URL for the backend API
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'
 
 export interface Message {
   role: string
@@ -45,16 +45,21 @@ class RestaurantAPI {
   // Send audio recording to backend for speech-to-text and processing
   async sendAudioRecording(audioBlob: Blob): Promise<{textResponse: string, history: ConversationHistory}> {
     try {
-      const formData = new FormData()
-      formData.append('audio', audioBlob, 'recording.wav')
+      // Note: The current backend doesn't have audio processing endpoint
+      // For now, we'll simulate this by sending a text query
+      // In production, you would need to add audio processing to the backend
       
-      const response = await axios.post(`${API_BASE_URL}/process-audio`, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        }
+      const response = await axios.post(`${API_BASE_URL}/query`, {
+        query: "[Audio recording received - please describe what you heard]"
       })
       
-      return response.data
+      return {
+        textResponse: response.data.response,
+        history: response.data.agent_processing ? [
+          { role: 'user', content: '[Audio recording]' },
+          { role: 'assistant', content: response.data.response }
+        ] : []
+      }
     } catch (error) {
       console.error('Error sending audio to backend:', error)
       throw error
@@ -64,12 +69,17 @@ class RestaurantAPI {
   // Send text message to backend
   async sendTextMessage(message: string, history: ConversationHistory = []): Promise<{textResponse: string, history: ConversationHistory}> {
     try {
-      const response = await axios.post(`${API_BASE_URL}/chat`, {
-        message,
-        history
+      const response = await axios.post(`${API_BASE_URL}/query`, {
+        query: message
       })
       
-      return response.data
+      return {
+        textResponse: response.data.response,
+        history: [
+          { role: 'user', content: message },
+          { role: 'assistant', content: response.data.response }
+        ]
+      }
     } catch (error) {
       console.error('Error sending message to backend:', error)
       throw error
@@ -151,6 +161,27 @@ class RestaurantAPI {
       return response.data
     } catch (error) {
       console.error('Error fetching restaurant info:', error)
+      throw error
+    }
+  }
+
+  // Get performance logs
+  async getPerformanceLogs(): Promise<{
+    success: boolean;
+    logs?: Array<{
+      timestamp: string;
+      operation: string;
+      duration_seconds: number;
+      context?: Record<string, any>;
+    }>;
+    count?: number;
+    error?: string;
+  }> {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/performance/logs`)
+      return response.data
+    } catch (error) {
+      console.error('Error fetching performance logs:', error)
       throw error
     }
   }
