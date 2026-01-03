@@ -1,58 +1,52 @@
+from piper import PiperVoice, SynthesisConfig
+from piper.download_voices import download_voice
+
 from typing import Generator
-from supertonic.helper import load_text_to_speech, load_voice_style, chunk_text
 import numpy as np
-import os
+from pathlib import Path
 
-def generate_speech(
-    text: str,
-    onnx_dir: str = None,
-    voice_style_path: str = None,
-    speed: float = 1.05,
-    total_step: int = 5
-) -> tuple[np.ndarray, float]:
-    # Use absolute paths based on the current file location
-    if onnx_dir is None:
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        onnx_dir = os.path.join(current_dir, "..", "supertonic", "assets", "onnx")
+from pathseeker import VOICES_DIR
+from settings import VOICES_CONFIG
+
+class TTSModel:
+    def __init__(self, voice_path: str | Path, **synthesis_config_args):
+        self.voice = PiperVoice.load(voice_path)
+        self.config = SynthesisConfig(**synthesis_config_args)
     
-    if voice_style_path is None:
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        voice_style_path = os.path.join(current_dir, "..", "supertonic", "assets", "voice_styles", "M1.json")
+    def stream_speech(self, text: str) -> Generator[tuple[np.ndarray, int], None, None]:
+        for chunk in self.voice.synthesize(text, self.config):
+            yield chunk.audio_int16_array, chunk.sample_rate
+
+class TTSEngine:
+    def __init__(self, default_languages: list[str] = ['de', 'en', 'es', 'fr', 'it']):
+        self.models: dict[str, TTSModel] = {}
+        for lang in default_languages:
+            self._add_model(lang)
     
-    # Load TTS model
-    tts_model = load_text_to_speech(onnx_dir)
+    def _add_model(self, language: str):
+        if language in self.models:
+            return  # Model already loaded
 
-    # Load voice style
-    voice_style = load_voice_style([voice_style_path])
+        if language not in VOICES_CONFIG:
+            raise ValueError(f"No voice configuration found for language '{language}'")
 
-    # Synthesize speech
-    audio, _ = tts_model(
-        text=text,
-        style=voice_style,
-        speed=speed,
-        total_step=total_step
-    )
+        voice_info = VOICES_CONFIG[language]
+        voice_name = voice_info["voice_name"]
+        synthesis_config_args = voice_info.get("synthesis_config", {})
 
-    return audio, tts_model.sample_rate
+        voice_path = VOICES_DIR / f"{voice_name}.onnx"
+        if not voice_path.exists():
+            if not VOICES_DIR.exists():
+                VOICES_DIR.mkdir(parents=True, exist_ok=True)
+            print(f"Downloading voice model for language '{language}'...")
+            download_voice(voice_name, VOICES_DIR)
 
-def stream_speech(
-    text: str,
-    onnx_dir: str = "./src/supertonic/assets/onnx",
-    voice_style_path: str = "./src/supertonic/assets/voice_styles/M1.json",
-    speed: float = 1.05,
-    total_step: int = 5,
-    silence_duration: float = 0.3
-) -> Generator[tuple[np.ndarray, float], None, None]:
-    # Load TTS model
-    tts_model = load_text_to_speech(onnx_dir)
-
-    # Load voice style
-    voice_style = load_voice_style([voice_style_path])
-
-    # Synthesize speech chunk by chunk
-    text_list = chunk_text(text, max_len=1) # max_len=1 will chunk by sentences
-
-    for text in text_list:
-        wav, _ = tts_model._infer([text], voice_style, total_step, speed)
+        model = TTSModel(voice_path, **synthesis_config_args)
+        self.models[language] = model
+    
+    def stream_speech(self, language: str, text: str) -> Generator[tuple[np.ndarray, int], None, None]:
+        if language not in self.models:
+            self._add_model(language)
         
-        yield wav, tts_model.sample_rate
+        model = self.models[language]
+        yield from model.stream_speech(text)
