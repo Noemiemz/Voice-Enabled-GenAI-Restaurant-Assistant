@@ -2,7 +2,6 @@ import os
 from pymongo import MongoClient
 from pymongo.errors import ConnectionFailure, OperationFailure
 from typing import Optional, Dict, Any, List
-from datetime import datetime
 from bson.objectid import ObjectId
 from dotenv import load_dotenv
 
@@ -56,7 +55,6 @@ class MongoDBManager:
     def _ensure_connected(self):
         if not self.connected:
             self._connect()
-    
 
     # ===== Collection Accessors =====
     @property
@@ -107,56 +105,43 @@ class MongoDBManager:
         if self.reservations is None:
             return None
         try:
-            now = datetime.now().isoformat()
-            reservation_data["createdAt"] = now
-            reservation_data["updatedAt"] = now
-            reservation_data["status"] = "confirmed"
-
             result = self.reservations.insert_one(reservation_data)
             return self.get_reservation(str(result.inserted_id))
         except Exception as e:
             print(f"Error creating reservation: {e}")
             return None
 
-    def update_reservation(self, reservation_id: str, update_data: Dict[str, Any]) -> bool:
+    def update_reservation(self, reservation_id: str, update_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         if self.reservations is None:
-            return False
+            return None
         try:
-            # Never overwrite createdAt
-            update_data = {k: v for k, v in update_data.items() if k != "createdAt"}
-            update_data["updatedAt"] = datetime.now().isoformat()
-
             result = self.reservations.update_one(
                 {"_id": ObjectId(reservation_id)},
                 {"$set": update_data}
             )
-            return result.modified_count > 0
+            return self.get_reservation(reservation_id)
         except Exception as e:
             print(f"Error updating reservation: {e}")
-            return False
+            return None
 
-    def cancel_reservation(self, reservation_id: str) -> bool:
+    def cancel_reservation(self, reservation_id: str) -> Optional[bool]:
         if self.reservations is None:
-            return False
+            return None
         try:
-            result = self.reservations.update_one(
-                {"_id": ObjectId(reservation_id)},
-                {"$set": {
-                    "status": "cancelled",
-                    "updatedAt": datetime.now().isoformat()
-                }}
+            result = self.reservations.delete_one(
+                {"_id": ObjectId(reservation_id)}
             )
-            return result.modified_count > 0
+            return result.deleted_count > 0
         except Exception as e:
             print(f"Error cancelling reservation: {e}")
-            return False
+            return None
         
     def get_reservations(self, filters: Dict[str, Any] = None) -> List[Dict[str, Any]]:
         if self.reservations is None:
             return []
         try:
             query = filters or {}
-            reservations = list(self.reservations.find(query).sort("createdAt", -1))
+            reservations = list(self.reservations.find(query))
             for r in reservations:
                 r["_id"] = str(r["_id"])
             return reservations
@@ -172,6 +157,7 @@ class MongoDBManager:
             dishes = list(self.dishes.find())
             for d in dishes:
                 d["_id"] = str(d["_id"])
+            
             return dishes
         except Exception as e:
             print(f"Error getting dishes: {e}")
@@ -235,7 +221,6 @@ class MongoDBManager:
         if self.orders is None:
             return None
         try:
-            order_data["order_status"] = "pending"
             result = self.orders.insert_one(order_data)
             order = self.orders.find_one({"_id": result.inserted_id})
             if order:
@@ -245,6 +230,33 @@ class MongoDBManager:
             print(f"Error creating order: {e}")
             return None
     
+    def update_order(self, order_id: str, update_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        if self.orders is None:
+            return None
+        try:
+            result = self.orders.update_one(
+                {"_id": ObjectId(order_id)},
+                {"$set": update_data}
+            )
+            order = self.orders.find_one({"_id": ObjectId(order_id)})
+            if order:
+                order["_id"] = str(order["_id"])
+            return order
+        except Exception as e:
+            print(f"Error updating order: {e}")
+            return None
+        
+    def cancel_order(self, order_id: str) -> Optional[bool]:
+        if self.orders is None:
+            return None
+        try:
+            result = self.orders.delete_one(
+                {"_id": ObjectId(order_id)}
+            )
+            return result.deleted_count > 0
+        except Exception as e:
+            print(f"Error cancelling order: {e}")
+            return None
 
     # ===== CRUD Methods for Menu =====
     def get_menu(self) -> Optional[Dict[str, Any]]:
@@ -263,7 +275,6 @@ class MongoDBManager:
         if self.menu is None:
             return False
         try:
-            menu_data["lastUpdated"] = datetime.now().isoformat()
             result = self.menu.replace_one({}, menu_data)
             return result.modified_count > 0
         except Exception as e:

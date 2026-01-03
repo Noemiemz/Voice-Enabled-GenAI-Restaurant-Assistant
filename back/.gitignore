@@ -1,4 +1,9 @@
 .env
 __pycache__/
+src/data/piper_voices/
 
 /venv/
+
+todo.md
+
+logs/

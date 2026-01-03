@@ -2,6 +2,8 @@
 
 import { useState, useRef, useEffect } from 'react'
 import Image from "next/image"
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import api, { DishesByCategory } from './services/api'
 
 export default function Home() {
@@ -24,6 +26,8 @@ export default function Home() {
   const [isLoadingDishes, setIsLoadingDishes] = useState(false)
   const [menuError, setMenuError] = useState<string | null>(null)
   const [dishesError, setDishesError] = useState<string | null>(null)
+  const [textInput, setTextInput] = useState('')
+  const [isSendingText, setIsSendingText] = useState(false)
   
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const audioChunksRef = useRef<Blob[]>([])
@@ -234,6 +238,70 @@ export default function Home() {
     }
   }
   
+  const handleTextSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    
+    if (!textInput.trim()) return
+    
+    const userMessage = {
+      role: 'user',
+      content: textInput,
+      timestamp: new Date().toLocaleTimeString()
+    }
+    setConversation(prev => [...prev, userMessage])
+    setTextInput('')
+    setIsSendingText(true)
+    
+    try {
+      const { textResponse } = await api.sendTextMessage(textInput, conversation)
+      
+      const assistantResponse = {
+        role: 'assistant',
+        content: textResponse,
+        timestamp: new Date().toLocaleTimeString()
+      }
+      setConversation(prev => [...prev, assistantResponse])
+      
+    } catch (error) {
+      console.error('Error sending text message:', error)
+      let errorMessage = 'Désolé, je n\'ai pas pu traiter votre demande. Veuillez réessayer.'
+      
+      if (
+        typeof error === 'object' &&
+        error !== null &&
+        'response' in error &&
+        typeof (error as any).response === 'object' &&
+        (error as any).response !== null &&
+        'data' in (error as any).response &&
+        typeof (error as any).response.data === 'object' &&
+        (error as any).response.data !== null &&
+        'error' in (error as any).response.data
+      ) {
+        const backendError = (error as any).response.data.error
+        if (typeof backendError === 'string') {
+          errorMessage = `Désolé, une erreur est survenue: ${backendError}`
+        }
+      } else if (
+        typeof error === 'object' &&
+        error !== null &&
+        'message' in error &&
+        typeof (error as any).message === 'string' &&
+        (error as any).message.includes('Network Error')
+      ) {
+        errorMessage = 'Désolé, il semble y avoir un problème de connexion. Veuillez vérifier votre connexion internet.'
+      }
+      
+      const errorResponse = {
+        role: 'assistant',
+        content: errorMessage,
+        timestamp: new Date().toLocaleTimeString()
+      }
+      setConversation(prev => [...prev, errorResponse])
+    } finally {
+      setIsSendingText(false)
+    }
+  }
+  
   const handleReservationSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
@@ -281,6 +349,10 @@ export default function Home() {
     return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
   }
   
+  const clearConversation = () => {
+    setConversation([])
+  }
+  
   // Load restaurant info on component mount
   useEffect(() => {
     const loadRestaurantInfo = async () => {
@@ -321,7 +393,21 @@ export default function Home() {
         <main className="bg-white rounded-lg shadow-lg p-6 mb-6">
           {/* Conversation Area */}
           <div className="mb-6">
-            <h2 className="text-2xl font-semibold text-orange-700 mb-4">Conversation</h2>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-2xl font-semibold text-orange-700">Conversation</h2>
+              {conversation.length > 0 && (
+                <button
+                  onClick={clearConversation}
+                  className="bg-red-100 hover:bg-red-200 text-red-700 py-2 px-4 rounded-lg transition-colors flex items-center gap-2 text-sm font-medium"
+                  title="Effacer la conversation"
+                >
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+                  </svg>
+                  <span>Effacer</span>
+                </button>
+              )}
+            </div>
             <div className="border border-orange-200 rounded-lg p-4 h-96 overflow-y-auto bg-orange-50">
               {conversation.length === 0 ? (
                 <div className="text-center py-8 text-orange-400">
@@ -335,7 +421,13 @@ export default function Home() {
                       <span className="font-medium text-sm capitalize text-gray-800">{message.role}</span>
                       <span className="text-xs text-gray-500">{message.timestamp}</span>
                     </div>
-                    <p className="text-sm text-gray-900">{message.content}</p>
+                    {message.role === 'assistant' ? (
+                      <div className="text-sm text-gray-900 prose prose-sm max-w-none prose-p:my-1 prose-ul:my-1 prose-ol:my-1 prose-li:my-0">
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.content}</ReactMarkdown>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-gray-900">{message.content}</p>
+                    )}
                   </div>
                 ))
               )}
@@ -360,6 +452,39 @@ export default function Home() {
               )}
             </button>
           </div>
+          
+          {/* Text Input */}
+          <form onSubmit={handleTextSubmit} className="mb-6">
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={textInput}
+                onChange={(e) => setTextInput(e.target.value)}
+                placeholder="Tapez votre message..."
+                disabled={isSendingText}
+                className="flex-1 p-3 border border-orange-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-300 text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed"
+              />
+              <button
+                type="submit"
+                disabled={isSendingText || !textInput.trim()}
+                className="bg-orange-500 hover:bg-orange-600 text-white py-3 px-6 rounded-lg transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                {isSendingText ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    <span>Envoi...</span>
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                      <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
+                    </svg>
+                    <span>Envoyer</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </form>
           
           {/* Status */}
           {isListening && (
@@ -555,6 +680,20 @@ export default function Home() {
           )}
         </main>
         
+        {/* Performance Dashboard Link (Admin) */}
+        <div className="fixed bottom-4 right-4">
+          <button
+            onClick={() => window.location.href = '/performance'}
+            className="bg-orange-500 hover:bg-orange-600 text-white py-2 px-4 rounded-lg transition-colors flex items-center gap-2 text-sm font-medium shadow-lg"
+            title="Performance Dashboard"
+          >
+            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+              <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span>Performance</span>
+          </button>
+        </div>
+
         {/* Footer */}
         <footer className="text-center text-sm text-orange-500 py-4">
           <p>© {new Date().getFullYear()} Les Pieds dans le Plat. Tous droits réservés.</p>
