@@ -144,3 +144,5 @@ VOICES_CONFIG = {
         },
     },
 }
+
+AVAILABLE_VOICES = list(VOICES_CONFIG.keys())

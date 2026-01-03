@@ -22,13 +22,17 @@ class ConversationState:
             'order': [],
             'reservation': []
         }
+    
+    def clear_history(self):
+        self.conversation_history = {
+            'info': [],
+            'order': [],
+            'reservation': []
+        }
+        self.active_agent = None
 
-conversation_state = ConversationState()
-
-def create_supervisor_agent():
+def create_supervisor_agent(db: MongoDBManager, conversation_state: ConversationState) -> ChatMistralAI:
     """Create and return the supervisor agent."""
-
-    db = MongoDBManager()
 
     info_agent = create_info_agent(db)
     order_agent = create_order_agent(db)

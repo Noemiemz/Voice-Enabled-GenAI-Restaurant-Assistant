@@ -1,5 +1,6 @@
 import streamlit as st
-from models.agents import create_supervisor_agent
+from models.agents import create_supervisor_agent, ConversationState
+from data.mongodb import MongoDBManager
 
 def app():
     st.set_page_config(page_title="Restaurant AI Assistant", layout="wide")
@@ -8,8 +9,14 @@ def app():
     if "messages" not in st.session_state:
         st.session_state.messages = [{"role": "assistant", "content": "Hello! I am Roger, your Restaurant AI Assistant for Les Pieds dans le Plat. How can I assist you?"}]
 
+    if "db" not in st.session_state:
+        st.session_state.db = MongoDBManager()
+
+    if "conversation_state" not in st.session_state:
+        st.session_state.conversation_state = ConversationState()
+
     if "supervisor_agent" not in st.session_state:
-        st.session_state.supervisor_agent = create_supervisor_agent()
+        st.session_state.supervisor_agent = create_supervisor_agent(st.session_state.db, st.session_state.conversation_state)
     
     # Page title
     st.title("Restaurant AI Assistant")
@@ -31,7 +38,7 @@ def app():
         with st.chat_message("user"):
             st.markdown(prompt)
         
-        # Generate assistant response (placeholder - integrate with your backend)
+        # Generate assistant response
         with st.chat_message("assistant"):
             with st.spinner("Thinking..."):
                 for step in st.write_stream(st.session_state.supervisor_agent.stream(
@@ -39,8 +46,10 @@ def app():
                 )):
                     for update in step.values():
                         for message in update.get("messages", []):
-                            message.pretty_print()
+                            # message.pretty_print()
+                            pass
         
+        print(st.session_state.messages)
         # Add assistant response to chat history
         st.session_state.messages.append({"role": "assistant", "content": message.text})
         
@@ -53,6 +62,7 @@ def app():
         
         if st.button("Clear Chat History"):
             st.session_state.messages = []
+            st.session_state.conversation_state.clear_history()
             st.rerun()
 
 
