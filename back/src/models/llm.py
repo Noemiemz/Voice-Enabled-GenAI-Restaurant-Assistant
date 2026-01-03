@@ -1,10 +1,20 @@
 from mistralai import Mistral
+from smolagents.models import ChatMessage, MessageRole
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 class MistralWrapper:
     def __init__(self, api_key: str = None):
+        if api_key is None:
+            api_key = os.getenv("MISTRAL_API_KEY")
+
+        if not api_key:
+            raise ValueError("MISTRAL_API_KEY is not set")
+        
         self.client = Mistral(api_key=api_key)
         self.model = "mistral-small-2506"
-        import os
         # Construct absolute path to system prompt file
         current_dir = os.path.dirname(os.path.abspath(__file__))
         prompt_path = os.path.join(current_dir, "..", "data", "prompts", "system_prompt.txt")
@@ -34,3 +44,4 @@ class MistralWrapper:
             fallback_response = "Désolé, je n'ai pas pu traiter votre demande. Veuillez réessayer."
             history.append({"role": "assistant", "content": fallback_response})
             return fallback_response, history
+
