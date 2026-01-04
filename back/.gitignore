@@ -1,3 +1,5 @@
 .env
 __pycache__/
 src/data/piper_voices/
+
+src/logs/

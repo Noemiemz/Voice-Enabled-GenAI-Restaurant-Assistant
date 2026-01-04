@@ -6,6 +6,7 @@ from datetime import datetime
 
 from data.mongodb import MongoDBManager
 from pathseeker import PROMPTS_DIR
+from utils.logger import log_execution
 
 import os
 from dotenv import load_dotenv
@@ -19,21 +20,25 @@ def create_info_agent(db: MongoDBManager):
     
     # --- Create tools ---
     @tool("get_all_dishes")
+    @log_execution(message="Fetching all dishes from menu", object_name="agent_info")
     def get_all_dishes() -> List[Dict[str, Any]]:
         """Get all dishes from the menu."""
         return db.get_all_dishes()
     
     @tool("get_dishes_by_category")
+    @log_execution(message="Fetching dishes grouped by category", object_name="agent_info")
     def get_dishes_by_category() -> Dict[str, List[Dict[str, Any]]]:
         """Get all dishes grouped by category."""
         return db.get_dishes_by_category()
 
     @tool("get_formulas")
+    @log_execution(message="Fetching special formulas", object_name="agent_info")
     def get_formulas() -> Optional[Dict[str, Any]]:
         """Get special formulas."""
         return db.get_menu()
     
     @tool("get_restaurant_info")
+    @log_execution(message="Retrieving restaurant information", object_name="agent_info")
     def get_restaurant_info() -> Dict[str, Any]:
         """Get general restaurant information including location, hours, and contact details."""
         return db.get_restaurant_info()
