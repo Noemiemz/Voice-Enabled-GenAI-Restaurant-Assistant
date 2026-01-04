@@ -7,6 +7,7 @@ from datetime import datetime
 from data.mongodb import MongoDBManager
 from data.table_schemas import OrderSchema
 from pathseeker import PROMPTS_DIR
+from utils.logger import log_execution, log_function_execution
 
 import os
 from dotenv import load_dotenv
@@ -20,16 +21,19 @@ def create_order_agent(db: MongoDBManager):
     
     # --- Create tools ---
     @tool("get_all_dishes")
+    @log_execution(message="Fetching all dishes from menu", object_name="agent_order")
     def get_all_dishes() -> List[Dict[str, Any]]:
         """Get all dishes from the menu."""
         return db.get_all_dishes()
 
     @tool("get_formulas")
+    @log_execution(message="Fetching special formulas", object_name="agent_order")
     def get_formulas() -> Optional[Dict[str, Any]]:
         """Get special formulas."""
         return db.get_menu()
 
     @tool("get_orders")
+    @log_execution(message="Retrieving orders with filters", object_name="agent_order")
     def get_orders(filters: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
         """Get orders with optional filters.
         
@@ -39,6 +43,7 @@ def create_order_agent(db: MongoDBManager):
         return db.get_orders(filters)
     
     @tool("create_order")
+    @log_execution(message="Creating new order", object_name="agent_order")
     def create_order(order_data: OrderSchema) -> Optional[Dict[str, Any]]:
         """Create a new order.
         
@@ -48,6 +53,7 @@ def create_order_agent(db: MongoDBManager):
         return db.create_order(order_data.model_dump())
     
     @tool("update_order")
+    @log_execution(message="Updating existing order", object_name="agent_order")
     def update_order(order_id: str, update_data: OrderSchema) -> Optional[Dict[str, Any]]:
         """Update an existing order.
         
@@ -58,6 +64,7 @@ def create_order_agent(db: MongoDBManager):
         return db.update_order(order_id, update_data.model_dump())
     
     @tool("cancel_order")
+    @log_execution(message="Cancelling order", object_name="agent_order")
     def cancel_order(order_id: str) -> Optional[Dict[str, Any]]:
         """Cancel an order.
         

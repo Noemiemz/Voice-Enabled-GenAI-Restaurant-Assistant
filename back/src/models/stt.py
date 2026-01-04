@@ -1,6 +1,7 @@
 from faster_whisper import WhisperModel
 import numpy as np
 
+from utils.logger import log_execution
 class WhisperWrapper:
     """
     Wrapper for the Faster Whisper model for speech-to-text transcription.
@@ -22,6 +23,7 @@ class WhisperWrapper:
         )
         print("Whisper model loaded.")
 
+    @log_execution
     def transcribe(self, audio_data: np.ndarray, beam_size: int = 5) -> dict:
         """
         Transcribe an audio file.

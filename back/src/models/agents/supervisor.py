@@ -6,6 +6,7 @@ from models.agents import create_info_agent, create_order_agent, create_reservat
 from data.mongodb import MongoDBManager
 from pathseeker import PROMPTS_DIR
 from settings import AVAILABLE_VOICES
+from utils.logger import log_execution
 
 import os
 from dotenv import load_dotenv
@@ -41,6 +42,7 @@ def create_supervisor_agent(db: MongoDBManager, conversation_state: Conversation
     
     # --- Create tools ---
     @tool("info_event")
+    @log_execution(message="Processing restaurant information request", object_name="agent_supervisor")
     def info_event(request: str) -> str:
         """
         Provide information about the restaurant, dishes, menu and offers.
@@ -63,6 +65,7 @@ def create_supervisor_agent(db: MongoDBManager, conversation_state: Conversation
         return f"Response of the info_agent:\n{assistant_message}"
 
     @tool("order_event")
+    @log_execution(message="Processing food ordering request", object_name="agent_supervisor")
     def order_event(request: str) -> str:
         """
         Handle food ordering requests.
@@ -85,6 +88,7 @@ def create_supervisor_agent(db: MongoDBManager, conversation_state: Conversation
         return f"Response of the order_agent:\n{assistant_message}"
     
     @tool("reservation_event")
+    @log_execution(message="Processing reservation request", object_name="agent_supervisor")
     def reservation_event(request: str) -> str:
         """
         Manage reservation-related requests.

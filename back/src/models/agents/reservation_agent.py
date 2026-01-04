@@ -7,6 +7,7 @@ from datetime import datetime
 from data.mongodb import MongoDBManager
 from data.table_schemas import TableSchema, ReservationSchema
 from pathseeker import PROMPTS_DIR
+from utils.logger import log_execution
 
 import os
 from dotenv import load_dotenv
@@ -20,6 +21,7 @@ def create_reservation_agent(db: MongoDBManager):
     
     # --- Create tools ---
     @tool("get_reservations")
+    @log_execution(message="Retrieving reservations with filters", object_name="agent_reservation")
     def get_reservations(filters: Optional[Dict] = None) -> List[Dict[str, Any]]:
         """Get reservations with optional filters.
         
@@ -29,11 +31,13 @@ def create_reservation_agent(db: MongoDBManager):
         return db.get_reservations(filters)
 
     @tool("get_tables")
+    @log_execution(message="Fetching available tables", object_name="agent_reservation")
     def get_tables() -> List[TableSchema]:
         """Get all available tables in the restaurant."""
         return db.get_tables()
 
     @tool("create_reservation")
+    @log_execution(message="Creating new reservation", object_name="agent_reservation")
     def create_reservation(reservation_data: ReservationSchema) -> Optional[Dict[str, Any]]:
         """Create a new reservation.
         
@@ -43,6 +47,7 @@ def create_reservation_agent(db: MongoDBManager):
         return db.create_reservation(reservation_data.model_dump())
     
     @tool("update_reservation")
+    @log_execution(message="Updating existing reservation", object_name="agent_reservation")
     def update_reservation(reservation_id: str, update_data: ReservationSchema) -> Optional[Dict[str, Any]]:
         """Update an existing reservation.
         
@@ -53,6 +58,7 @@ def create_reservation_agent(db: MongoDBManager):
         return db.update_reservation(reservation_id, update_data.model_dump())
 
     @tool("cancel_reservation")
+    @log_execution(message="Cancelling reservation", object_name="agent_reservation")
     def cancel_reservation(reservation_id: str) -> Optional[Dict[str, Any]]:
         """Cancel a reservation.
         
