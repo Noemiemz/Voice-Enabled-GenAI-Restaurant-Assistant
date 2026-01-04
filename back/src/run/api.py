@@ -14,10 +14,11 @@ from settings import AVAILABLE_VOICES
 
 app = Flask(__name__)
 app.config["DEBUG"] = True
-CORS(app, origins=["http://localhost:3000"])
+CORS(app, origins=["http://localhost:3000", "http://frontend:3000"], supports_credentials=True)
 socket = SocketIO(
     app, 
-    cors_allowed_origins=["http://localhost:3000"],
+    cors_allowed_origins=["http://localhost:3000", "http://frontend:3000"],
+    async_mode="threading",
     max_http_buffer_size=100 * 1024 * 1024,  # 100MB max message size
     ping_timeout=60,
     ping_interval=25,
