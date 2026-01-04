@@ -22,7 +22,6 @@ socket = SocketIO(
     max_http_buffer_size=100 * 1024 * 1024,  # 100MB max message size
     ping_timeout=60,
     ping_interval=25,
-    async_mode='threading'
 )
 
 # Initialize models and agents
