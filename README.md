@@ -74,6 +74,17 @@ The backend is built with Python and includes the following components:
 
 ## Frontend
 The frontend is built with Next.js and provides a user-friendly interface for interacting with the voice assistant.
+![Interface Example](Images\interface_example.png)
+
+
+## Overall System Structure
+![System Structure](Images\System_architecture.png)
+
+## Processing Pipeline
+![Processing Pipeline](Images\processing_pipeline.png)
+
+## Database Structure
+![Database Structure](Images\database_structure.png)
 
 ## Getting Started
 
