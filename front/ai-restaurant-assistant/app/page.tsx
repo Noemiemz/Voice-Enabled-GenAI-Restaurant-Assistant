@@ -9,7 +9,20 @@ interface Message {
 }
 
 export default function Home() {
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<Message[]>(() => {
+    // Load messages from localStorage on initial render
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('restaurantAssistantMessages');
+      if (saved) {
+        try {
+          return JSON.parse(saved);
+        } catch (e) {
+          console.error('Error parsing saved messages:', e);
+        }
+      }
+    }
+    return [];
+  });
   const [isRecording, setIsRecording] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -154,6 +167,13 @@ export default function Home() {
     scrollToBottom();
   }, [messages]);
 
+  // Persist messages to localStorage whenever they change
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('restaurantAssistantMessages', JSON.stringify(messages));
+    }
+  }, [messages]);
+
   const startRecording = async () => {
     try {
       setTranscriptionError(""); // Clear any previous errors
@@ -240,6 +260,7 @@ export default function Home() {
       
       if (response.ok) {
         setMessages([]);
+        localStorage.removeItem('restaurantAssistantMessages');
         console.log("History cleared successfully");
       } else {
         console.error("Failed to clear history");
