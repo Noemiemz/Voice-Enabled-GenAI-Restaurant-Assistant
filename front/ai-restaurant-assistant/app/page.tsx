@@ -12,6 +12,8 @@ export default function Home() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isRecording, setIsRecording] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [transcriptionError, setTranscriptionError] = useState<string>("");
   const [userLanguage, setUserLanguage] = useState<string>("en");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const socketRef = useRef<Socket | null>(null);
@@ -26,6 +28,7 @@ export default function Home() {
     if (!audioContextRef.current || audioQueueRef.current.length === 0) {
       isPlayingRef.current = false;
       setIsSpeaking(false);
+      setIsProcessing(false);
       return;
     }
 
@@ -56,8 +59,17 @@ export default function Home() {
     socketRef.current = io("http://localhost:5000");
     const socket = socketRef.current;
 
-    socket.on("transcription_result", (data: { text: string, language: string }) => {
+    socket.on("transcription_result", (data: { text: string, language: string, error: string | null }) => {
       console.log("Transcription:", data.text);
+      if (data.error) {
+        setTranscriptionError(data.error);
+      } else {
+        setTranscriptionError("");
+      }
+      if (data.text === "") {
+        setIsProcessing(false);
+        return;
+      }
       
       setMessages((prev) => [
         ...prev,
@@ -144,6 +156,7 @@ export default function Home() {
 
   const startRecording = async () => {
     try {
+      setTranscriptionError(""); // Clear any previous errors
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const mediaRecorder = new MediaRecorder(stream);
       mediaRecorderRef.current = mediaRecorder;
@@ -199,14 +212,40 @@ export default function Home() {
     if (mediaRecorderRef.current && isRecording) {
       mediaRecorderRef.current.stop();
       setIsRecording(false);
+      setIsProcessing(true);
     }
   };
 
   const handleMicClick = () => {
+    // Don't allow recording while processing or LLM is speaking
+    if ((isProcessing || isSpeaking) && !isRecording) {
+      return;
+    }
+    
     if (isRecording) {
       stopRecording();
     } else {
       startRecording();
+    }
+  };
+
+  const clearHistory = async () => {
+    try {
+      const response = await fetch("http://localhost:5000/clear_history", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+      
+      if (response.ok) {
+        setMessages([]);
+        console.log("History cleared successfully");
+      } else {
+        console.error("Failed to clear history");
+      }
+    } catch (error) {
+      console.error("Error clearing history:", error);
     }
   };
 
@@ -253,12 +292,27 @@ export default function Home() {
               <div ref={messagesEndRef} />
             </div>
           </div>
+          {messages.length > 0 && (
+            <div className="px-6 pb-4">
+              <button
+                onClick={clearHistory}
+                className="w-full py-2 px-4 bg-red-400/80 hover:bg-red-500 text-white rounded-lg transition-colors duration-200 font-medium text-sm"
+              >
+                Clear History
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
       {/* Right Column - Microphone */}
-      <div className="flex-1 flex items-center justify-center p-8">
-        <MicrophoneButton isRecording={isRecording} onClick={handleMicClick} />
+      <div className="flex-1 flex flex-col items-center justify-center p-8">
+        <MicrophoneButton isRecording={isRecording} isSpeaking={isSpeaking} isProcessing={isProcessing} onClick={handleMicClick} />
+        {transcriptionError && (
+          <div className="mt-4 text-red-500 text-center max-w-md">
+            <p className="text-sm font-medium">{transcriptionError}</p>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -286,17 +340,26 @@ function LLMAnimation({ isSpeaking }: { isSpeaking: boolean }) {
 // Microphone Button Component
 function MicrophoneButton({
   isRecording,
+  isSpeaking,
+  isProcessing,
   onClick,
 }: {
   isRecording: boolean;
+  isSpeaking: boolean;
+  isProcessing: boolean;
   onClick: () => void;
 }) {
+  const isDisabled = (isProcessing || isSpeaking) && !isRecording;
+  
   return (
     <button
       onClick={onClick}
+      disabled={isDisabled}
       className={`relative w-32 h-32 rounded-full transition-all duration-300 shadow-lg ${
         isRecording
           ? "bg-rose-400 scale-110 shadow-rose-400/40"
+          : isDisabled
+          ? "bg-gray-400 cursor-not-allowed shadow-gray-400/40"
           : "bg-sky-400 hover:bg-sky-500 shadow-sky-400/40"
       }`}
     >

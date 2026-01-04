@@ -22,7 +22,6 @@ socket = SocketIO(
     max_http_buffer_size=100 * 1024 * 1024,  # 100MB max message size
     ping_timeout=60,
     ping_interval=25,
-    async_mode='threading'
 )
 
 # Initialize models and agents
@@ -46,10 +45,12 @@ def transcribe_audio(data):
     transcription, user_language = stt_model.transcribe(audio_np)
     print(f"Transcription result: {transcription}")
 
+    error = None
     if user_language not in AVAILABLE_VOICES:
         user_language = "en"  # Default to English if language not supported
+        error = "Selected language not supported for TTS. Defaulted to English."
 
-    emit('transcription_result', {'text': transcription, 'language': user_language})
+    emit('transcription_result', {'text': transcription, 'language': user_language, 'error': error})
 
 @socket.on('synthesize_speech')
 def synthesize_speech(data):
