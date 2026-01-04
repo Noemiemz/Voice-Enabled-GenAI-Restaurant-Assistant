@@ -12,35 +12,71 @@ export default function Home() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isRecording, setIsRecording] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [userLanguage, setUserLanguage] = useState<string>("en");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const socketRef = useRef<Socket | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const audioContextRef = useRef<AudioContext | null>(null);
+  const audioQueueRef = useRef<AudioBuffer[]>([]);
+  const isPlayingRef = useRef(false);
+  const hasInitializedSocket = useRef(false);
+
+  const playNextAudioChunk = () => {
+    if (!audioContextRef.current || audioQueueRef.current.length === 0) {
+      isPlayingRef.current = false;
+      setIsSpeaking(false);
+      return;
+    }
+
+    isPlayingRef.current = true;
+    setIsSpeaking(true);
+
+    const audioBuffer = audioQueueRef.current.shift()!;
+    const source = audioContextRef.current.createBufferSource();
+    source.buffer = audioBuffer;
+    source.connect(audioContextRef.current.destination);
+    
+    source.onended = () => {
+      playNextAudioChunk(); // Play next chunk when current one finishes
+    };
+    
+    source.start();
+  };
 
   useEffect(() => {
+    // Prevent double initialization from React Strict Mode
+    if (hasInitializedSocket.current) {
+      return;
+    }
+    
+    hasInitializedSocket.current = true;
+
     // Initialize socket connection
     socketRef.current = io("http://localhost:5000");
+    const socket = socketRef.current;
 
-    socketRef.current.on("transcription_result", (data: { text: string, language: string }) => {
+    socket.on("transcription_result", (data: { text: string, language: string }) => {
       console.log("Transcription:", data.text);
-      setMessages((prev) => [...prev, { role: "user", content: data.text }]);
       
-      // Send messages to get LLM response
-      const allMessages = [...messages, { role: "user", content: data.text }];
-      console.log("Sending to LLM:", { messages: allMessages, language: data.language });
-      socketRef.current?.emit("synthesize_speech", { messages: allMessages, language: data.language });
+      setMessages((prev) => [
+        ...prev,
+        { role: "user" as const, content: data.text }
+      ]);
+
+      setUserLanguage(data.language);
+      
       setIsSpeaking(true);
     });
 
-    socketRef.current.on("llm_text_response", (data: { text: string }) => {
+    socket.on("llm_text_response", (data: { text: string }) => {
       console.log("LLM Response:", data.text);
       setMessages((prev) => [...prev, { role: "assistant", content: data.text }]);
     });
 
-    socketRef.current.on("llm_audio_chunk", async (data: { audio: string; sample_rate: number }) => {
+    socket.on("llm_audio_chunk", async (data: { audio: string; sample_rate: number }) => {
       console.log("Received audio chunk");
-      // Play audio chunk
+      // Initialize audio context if needed
       if (!audioContextRef.current) {
         audioContextRef.current = new AudioContext();
       }
@@ -69,25 +105,34 @@ export default function Home() {
           channelData[i] = int16Array[i] / 32768.0; // Normalize to -1.0 to 1.0
         }
         
-        // Play the audio
-        const source = audioContextRef.current.createBufferSource();
-        source.buffer = audioBuffer;
-        source.connect(audioContextRef.current.destination);
-        source.start();
+        // Add to queue
+        audioQueueRef.current.push(audioBuffer);
         
-        source.onended = () => {
-          setIsSpeaking(false);
-        };
+        // Start playing if not already playing
+        if (!isPlayingRef.current) {
+          playNextAudioChunk();
+        }
       } catch (error) {
-        console.error("Error playing audio:", error);
-        setIsSpeaking(false);
+        console.error("Error processing audio chunk:", error);
       }
     });
 
     return () => {
-      socketRef.current?.disconnect();
+      // Disconnect on unmount
+      socket.disconnect();
     };
-  }, [messages]);
+  }, []);
+
+  useEffect(() => {
+    if (messages.length > 0) {
+      const lastMessage = messages[messages.length - 1];
+      if (lastMessage.role === "user") {
+        console.log("Sending to LLM:", { messages, language: userLanguage });
+        socketRef.current?.emit("synthesize_speech", { messages, language: userLanguage });
+        setIsSpeaking(true);
+      }
+    }
+  }, [messages]); // Only re-run if messages changes
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });

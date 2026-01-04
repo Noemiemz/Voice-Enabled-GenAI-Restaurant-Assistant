@@ -48,8 +48,10 @@ VOICES_CONFIG = {
         "synthesis_config": {},
     },
     "fr": { # French
-        "voice_name": "fr_FR-upmc-medium",
-        "synthesis_config": {},
+        "voice_name": "fr_FR-tom-medium",
+        "synthesis_config": {
+            "length_scale": 0.8,
+        },
     },
     "hi": { # Hindi
         "voice_name": "hi_IN-pratham-medium",

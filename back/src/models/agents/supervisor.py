@@ -119,7 +119,7 @@ def create_supervisor_agent(db: MongoDBManager, conversation_state: Conversation
         f.close()
 
     system_prompt += "\nYou only support the languages corresponding to the following voices codes: " + ", ".join(AVAILABLE_VOICES)
-    system_prompt += "\nIf you receive a request in a language you do not support, respond in English and start your response with: 'NOTE: Unsupported language requested. Responding in English.'"
+    system_prompt += "\nIf you receive a request in a language you do not support, respond in **ENGLISH** and start your response with: 'NOTE: Unsupported language requested. Responding in English.'"
 
     supervisor = create_agent(
         model=model,
