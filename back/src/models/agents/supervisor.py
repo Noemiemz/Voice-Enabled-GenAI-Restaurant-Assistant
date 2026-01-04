@@ -5,6 +5,7 @@ from langchain_mistralai import ChatMistralAI
 from models.agents import create_info_agent, create_order_agent, create_reservation_agent
 from data.mongodb import MongoDBManager
 from pathseeker import PROMPTS_DIR
+from settings import AVAILABLE_VOICES
 
 import os
 from dotenv import load_dotenv
@@ -116,6 +117,9 @@ def create_supervisor_agent(db: MongoDBManager, conversation_state: Conversation
     with open(prompt_path, "r") as f:
         system_prompt = f.read()
         f.close()
+
+    system_prompt += "\nYou only support the languages corresponding to the following voices codes: " + ", ".join(AVAILABLE_VOICES)
+    system_prompt += "\nIf you receive a request in a language you do not support, respond in English and start your response with: 'NOTE: Unsupported language requested. Responding in English.'"
 
     supervisor = create_agent(
         model=model,

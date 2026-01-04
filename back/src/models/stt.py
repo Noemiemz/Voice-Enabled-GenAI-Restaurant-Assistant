@@ -41,9 +41,6 @@ class WhisperWrapper:
 
         full_text = " ".join([segment.text for segment in segments])
 
-        return {
-            "text": full_text,
-            "language": info.language,
-        }
+        return full_text, info.language
 
 
